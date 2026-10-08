@@ -6,7 +6,11 @@ from flet import * #import all actions/controls in flet package
 def main(page: Page):
     BG = 'purple'  # create variables for unique colors
 
-    create_task_view = Container()
+    create_task_view = Container(
+        content=Container(
+            on_click=lambda _: page.go("/"), height=40, width=40, content=Text("x")
+        )
+    )
 
     tasks = Column()
 
@@ -112,11 +116,9 @@ def main(page: Page):
                 home_page
             ],
         ),
-        '/create_task': View(
+        "/create_task": View(
             "/create_task",
-            [
-                create_task_view
-            ]
+            [create_task_view]
         )
     }
 
@@ -127,6 +129,7 @@ def main(page: Page):
                 pages[page.route]
             )
         )
+        page.update()
 
     page.add(home_page)
 
