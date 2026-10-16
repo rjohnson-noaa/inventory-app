@@ -1,4 +1,8 @@
+
+
 import flet as ft
+
+#####USE SORTABLE COLUMNS AND SELECTED ROWS FOR ITEM PAGE USE DATATABLE2
 
 
 # function that runs the entire app
@@ -17,30 +21,47 @@ def main(page: ft.Page):
 
     def serial_change(e):
         item_serial.disabled = not e.control.value
+        item_serial.value = ''
         item_serial.update()
 
     def expire_change(e):
         item_expire.disabled = not e.control.value
+        item_expire.value = ''
         item_expire.update()
 
-    def entry_correct(e):
-        value = item_name.value.strip() if item_name.value else ''
+    def location_visible(e):
+        selected_value = e.control.value
 
-        if not value:
-            item_name.error_text = "Please enter the item name"
-        else:
-            item_name.error_text = None
-        item_name.update()
+        land_location.visible = (selected_value == 'Newport')
+        ship_location.visible = (selected_value == 'Ship')
+        other_location.visible = (selected_value == 'OTHER')
+
+        #land_location.value = ''
+        #ship_location.value = ''
+        #other_location.value = ''
+
+        land_location.update()
+        ship_location.update()
+        other_location.update()
+
+    #def entry_correct(e):
+       # value = item_name.value.strip() if item_name.value else ''
+
+        #if not value:
+      #      item_name.error_text = "Please enter the item name"
+      #  else:
+       #     item_name.error_text = None
+       # item_name.update()
 
     # Applicable lists and dropdowns----------------------------------------------------------------------------------------------
-    category = ['Sampling/Biology', 'Stationary', 'Hardware & Tools', 'Tech/Equipment', 'Chemicals', 'Rain Gear',
+    category = ['','Sampling/Biology', 'Stationary', 'Hardware & Tools', 'Tech/Equipment', 'Chemicals', 'Rain Gear',
                 'Safety', 'Deck', 'Miscellaneous']
     category_dd = [ft.DropdownOption(item) for item in category]
-    land_home = ['NAL', 'BFB', 'Chemical Shed']
+    land_home = ['','NAL', 'BFB', 'Chemical Shed']
     land_home_dd = [ft.DropdownOption(item) for item in land_home]
-    ship_home = ['Wet Lab', 'Acoustics', 'Chem Lab']
+    ship_home = ['','Wet Lab', 'Acoustics', 'Chem Lab']
     ship_home_dd = [ft.DropdownOption(item) for item in ship_home]
-    location = ['Newport', 'Ship', 'OTHER:'] #POPULATE SHIP, NEWPORT, OR OTHER
+    location = ['','Newport', 'Ship', 'OTHER'] #POPULATE SHIP, NEWPORT, OR OTHER
     location_dd = [ft.DropdownOption(item) for item in location]
     packing_bin = []  # append when bins are entered
 
@@ -68,7 +89,7 @@ def main(page: ft.Page):
     item_quantity = ft.TextField(
         label='Quantity',
         width=210,
-        hint_text='Enter a number or click various',
+        hint_text='# or click various',
         keyboard_type=ft.KeyboardType.NUMBER,
         color=ft.Colors.BLACK,
         disabled=False,
@@ -77,12 +98,14 @@ def main(page: ft.Page):
 
     item_location = ft.Dropdown(
         label = 'Item Location',
+        on_select=location_visible,
         width=210,
         options=location_dd
     )
 
     land_location = ft.Dropdown(
         label='Newport Location',
+        visible = False,
         width=210,
         options=land_home_dd
     )  # land location drop down
@@ -90,8 +113,15 @@ def main(page: ft.Page):
     ship_location = ft.Dropdown(
         label='Ship Location',
         width=210,
+        visible = False,
         options=ship_home_dd
     )  # ship location drop down
+
+    other_location = ft.TextField(
+        label= 'Other location',
+        visible = False,
+        width=210
+    )
 
     item_category = ft.Dropdown(
         label='Item Category',
@@ -106,8 +136,8 @@ def main(page: ft.Page):
         keyboard_type=ft.KeyboardType.TEXT,
         color=ft.Colors.BLACK,
         multiline = True,
-        min_lines = 2,
-        max_lines = 5
+        min_lines = 7,
+        max_lines = 10
     ) # notes textfield
 
     serial_toggle = ft.Checkbox(
@@ -118,7 +148,6 @@ def main(page: ft.Page):
     item_serial = ft.TextField(
         label = 'Item Serial #',
         width=210,
-        hint_text='Enter serial number if applicable',
         keyboard_type=ft.KeyboardType.NUMBER,
         disabled=True
     ) #serial number entry
@@ -139,6 +168,7 @@ def main(page: ft.Page):
     add_item_btn=ft.Button(
         content = ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
+            #on_click = ,
             controls=[
                 ft.Icon(
                     icon=ft.Icons.ADD,
@@ -187,7 +217,39 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
-    #additem on item page = ft.Button()
+    add_btn = ft.Button(
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            controls=[
+                ft.Icon(
+                    icon=ft.Icons.ADD,
+                    size=20,
+                    color=ft.Colors.GREEN
+                ),
+                ft.Text('Add', size=15)
+            ],
+        ),
+        width=125,
+        height=62.5,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+    )
+
+    cancel_btn = ft.Button(
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            controls=[
+                ft.Icon(
+                    icon=ft.Icons.CANCEL,
+                    size=20,
+                    color=ft.Colors.RED
+                ),
+                ft.Text('Cancel', size=15)
+            ],
+        ),
+        width=125,
+        height=62.5,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+    )
 
     # Defined page contents-------------------------------------------------------------------------------------------------
 
@@ -204,69 +266,29 @@ def main(page: ft.Page):
                     bgcolor=dark_gray,
                     center_title=False
                 ),
-                ft.Row(alignment = 'spaceBetween', vertical_alignment = ft.CrossAxisAlignment.START,
+                #ft.Container(
+                 # height = 40
+                #),
+                ft.Row(spacing = 100 , alignment=ft.MainAxisAlignment.CENTER, vertical_alignment = ft.CrossAxisAlignment.START,
                     controls = [
-                        ft.Container(
-                            item_name
-                        ),
-                        ft.Column(
+                        ft.Column(spacing = 15, controls=[
+                            item_name, ft.Column(controls =[item_quantity, item_number_various]), item_category, item_location, land_location, ship_location, other_location
+                        ]),
+                        ft.Column(spacing=15,
                             controls = [
-                                ft.Row(controls =[
-                                    item_serial
-                                ]),
-                                ft.Row(controls = [
-                                    serial_toggle
-                                ]
-                                )
+                                ft.Column(controls=[serial_toggle, item_serial]), ft.Column(controls=[expire_toggle, item_expire]), notes
+
                             ]
                         )
                     ]
-                ), #top row with item name and serial #
-                ft.Row(alignment = 'spaceBetween',vertical_alignment = ft.CrossAxisAlignment.START,
-                       controls=[
-                           ft.Column(
-                               controls=[
-                                   ft.Row(controls=[
-                                       item_quantity
-                                   ]),
-                                   ft.Row(controls=[
-                                       item_number_various
-                                   ]
-                                   )
-                               ]
-                           ),
-                           ft.Column(
-                               controls=[
-                                   ft.Row(controls=[
-                                       item_expire
-                                   ]),
-                                   ft.Row(controls=[
-                                       expire_toggle
-                                   ]
-                                   )
-                               ]
-                           )
-                       ]
                 ),
-                ft.Row(alignment = 'spaceBetween', vertical_alignment = ft.CrossAxisAlignment.START,
-                    controls=[
-                        ft.Container(alignment=ft.Alignment.TOP_LEFT, content =
-                            item_category
-                        ),
-                        ft.Row(
-                            controls=[notes]
-                        )
-                    ]
-                ),
-                ft.Row(
-                    controls=[
-                        ft.Container(
-                            location_dd
-                        )
-                    ]
+                ft.Column(controls =
+                    ft.Row(spacing = 250, alignment = ft.MainAxisAlignment.CENTER,
+                        controls = [cancel_btn, add_btn]
+                    )
                 )
-            ]
-        )
+            ],
+        ),
     )
 
     main_page = ft.Container(
