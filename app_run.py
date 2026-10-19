@@ -1,9 +1,38 @@
-
-
 import flet as ft
+import flet_datatable2 as fdt
+import sqlite3
 
-#####USE SORTABLE COLUMNS AND SELECTED ROWS FOR ITEM PAGE USE DATATABLE2
-
+def int_db():
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+    cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS items
+                   (
+                       id
+                       INTEGER
+                       PRIMARY
+                       KEY
+                       AUTOINCREMENT,
+                       name
+                       TEXT
+                       NOT
+                       NULL,
+                       quantity
+                       TEXT,
+                       category
+                       TEXT,
+                       location
+                       TEXT,
+                       serial
+                       TEXT,
+                       expiration
+                       TEXT,
+                       notes
+                       TEXT
+                   )
+                   """)
+    conn.commit()
+    conn.close()
 
 # function that runs the entire app
 def main(page: ft.Page):
@@ -13,7 +42,7 @@ def main(page: ft.Page):
     page.window.resizable = True
     page.window.center()
 
-    #definitions ---------------------------------------------------------------------------------------------------------
+#definitions ---------------------------------------------------------------------------------------------------------
     def quantity_change(e):
         item_quantity.disabled = e.control.value
         item_quantity.value = ''
@@ -44,6 +73,13 @@ def main(page: ft.Page):
         ship_location.update()
         other_location.update()
 
+    def navigate_to(route_path):
+        page.route = route_path
+        route_change(None)
+
+
+
+
     #def entry_correct(e):
        # value = item_name.value.strip() if item_name.value else ''
 
@@ -53,7 +89,7 @@ def main(page: ft.Page):
        #     item_name.error_text = None
        # item_name.update()
 
-    # Applicable lists and dropdowns----------------------------------------------------------------------------------------------
+# Applicable lists and dropdowns----------------------------------------------------------------------------------------------
     category = ['','Sampling/Biology', 'Stationary', 'Hardware & Tools', 'Tech/Equipment', 'Chemicals', 'Rain Gear',
                 'Safety', 'Deck', 'Miscellaneous']
     category_dd = [ft.DropdownOption(item) for item in category]
@@ -65,27 +101,42 @@ def main(page: ft.Page):
     location_dd = [ft.DropdownOption(item) for item in location]
     packing_bin = []  # append when bins are entered
 
-    # All other page elements ------------------------------------------------------------------------------------------
+# All other page elements ------------------------------------------------------------------------------------------
     dark_blue = '#003087'
     light_blue = '#0085CA'
     white = 'white'
     gray = '#F0F0F0'
     dark_gray = '#686868'
 
+#data table
+    inventory_table = ft.SafeArea(
+                    expand=True,
+                    content=fdt.DataTable2(
+                        expand=True,
+                        empty=ft.Text("There's no way we have nothing; FIX IT!"),
+                        columns=[
+                            fdt.DataColumn2(label=ft.Text("First name")),
+                            fdt.DataColumn2(label=ft.Text("Last name")),
+                            fdt.DataColumn2(label=ft.Text("Age"), numeric=True),
+                        ],
+                    ),)
+
+#item name entry
     item_name = ft.TextField(
         label='Item Name',
         width = 210,
         hint_text='Enter item name',
         keyboard_type=ft.KeyboardType.TEXT,
-        color=ft.Colors.BLACK,
-        autofocus=True
-    ) # item name text box
+        color=ft.Colors.BLACK
+    )
 
+# various check box
     item_number_various = ft.Checkbox(
         label='Various',
         on_change=quantity_change
-    ) #quantity checkbox
+    )
 
+#item quantity entry
     item_quantity = ft.TextField(
         label='Quantity',
         width=210,
@@ -94,8 +145,9 @@ def main(page: ft.Page):
         color=ft.Colors.BLACK,
         disabled=False,
         input_filter = ft.NumbersOnlyInputFilter()
-    )# item quantity text box
+    )
 
+#item location, newport, ship or other
     item_location = ft.Dropdown(
         label = 'Item Location',
         on_select=location_visible,
@@ -103,32 +155,37 @@ def main(page: ft.Page):
         options=location_dd
     )
 
+#newport location
     land_location = ft.Dropdown(
         label='Newport Location',
         visible = False,
         width=210,
         options=land_home_dd
-    )  # land location drop down
+    )
 
+#ship location
     ship_location = ft.Dropdown(
         label='Ship Location',
         width=210,
         visible = False,
         options=ship_home_dd
-    )  # ship location drop down
+    )
 
+#other location entry
     other_location = ft.TextField(
         label= 'Other location',
         visible = False,
         width=210
     )
 
+#item category
     item_category = ft.Dropdown(
         label='Item Category',
         width=210,
         options=category_dd
-    )  # item category drop down
+    )
 
+#notes text field
     notes = ft.TextField(
         label='Notes (optional)',
         width=210,
@@ -138,37 +195,48 @@ def main(page: ft.Page):
         multiline = True,
         min_lines = 7,
         max_lines = 10
-    ) # notes textfield
+    )
 
+# serial number check box
     serial_toggle = ft.Checkbox(
         label = 'Serial Number?',
         on_change = serial_change
-    ) # serial number checkbox
+    )
 
+# serial number entry
     item_serial = ft.TextField(
         label = 'Item Serial #',
         width=210,
         keyboard_type=ft.KeyboardType.NUMBER,
         disabled=True
-    ) #serial number entry
+    )
 
+# expiration date toggle
     expire_toggle = ft.Checkbox(
         label = 'Expiration Date?',
         on_change = expire_change
-    ) #expiration date toggle
+    )
 
+# expiration date entry
     item_expire = ft.TextField(
         label='Item Expiration Date',
         width=210,
         hint_text='(MM/YY)',
         keyboard_type=ft.KeyboardType.DATETIME,
         disabled=True
-    ) # expiration date entry
+    )
 
+#keyword textfield for searching
+    keyword = ft.TextField(
+        label = 'Keyword',
+        width = 210
+    )
+
+#add item button on main page
     add_item_btn=ft.Button(
+        on_click = lambda _: navigate_to('/add_page'),
         content = ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
-            #on_click = ,
             controls=[
                 ft.Icon(
                     icon=ft.Icons.ADD,
@@ -183,7 +251,9 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
+# search item button on main page
     search_item_btn = ft.Button(
+        on_click=lambda _: navigate_to('/search_page'),
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
@@ -200,7 +270,9 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
+# pack/unpack button on main page
     pack_unpack_btn = ft.Button(
+        on_click = lambda _: navigate_to('/pack_unpack'),
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
@@ -217,6 +289,7 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
+# add button on item add page
     add_btn = ft.Button(
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
@@ -234,7 +307,9 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
+# cancel button on add item page, item search page, and item pack page
     cancel_btn = ft.Button(
+        on_click = lambda _: navigate_to('/'),
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
@@ -251,8 +326,56 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
-    # Defined page contents-------------------------------------------------------------------------------------------------
+    # Defined pages-------------------------------------------------------------------------------------------------
 
+# Packing page --------------------------------------------------------------------------------------------------------
+    pack_unpack_page = ft.Container()
+
+# Search item page -----------------------------------------------------------------------------------------------------
+    search_page = ft.Container(
+        content=ft.Column(
+            controls =[
+                ft.AppBar(
+                    leading=ft.Container(
+                        padding=ft.Padding(left=15),
+                        content=ft.Row(
+                            controls=[ft.Text('Item Search', size=20,
+                                              style=ft.TextStyle(weight=ft.FontWeight.BOLD, color=white))],
+                        )
+                    ),
+                    bgcolor=dark_gray,
+                    center_title=False
+                ),
+                ft.Row(
+                    spacing=100,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                    controls=[
+                       ft.Column(spacing=15, controls=[
+                           keyword, item_category, item_location, land_location, ship_location, other_location
+                       ]),
+                       ft.Column(
+                           spacing=15,
+                           controls=[
+                               ft.Column(controls=[serial_toggle, item_serial]),
+                               ft.Column(controls=[expire_toggle, item_expire]),
+                           ]
+                       )
+                   ]
+                ),
+                inventory_table,
+                ft.Column(controls=
+                    ft.Row(
+                        spacing=250,
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        controls=[cancel_btn]#add search button
+                    )
+                ),
+            ]
+        )
+    )
+
+#Add item page----------------------------------------------------------------------------------------------------------
     add_page = ft.Container(
         content=ft.Column(
             controls =[
@@ -266,9 +389,6 @@ def main(page: ft.Page):
                     bgcolor=dark_gray,
                     center_title=False
                 ),
-                #ft.Container(
-                 # height = 40
-                #),
                 ft.Row(spacing = 100 , alignment=ft.MainAxisAlignment.CENTER, vertical_alignment = ft.CrossAxisAlignment.START,
                     controls = [
                         ft.Column(spacing = 15, controls=[
@@ -290,7 +410,7 @@ def main(page: ft.Page):
             ],
         ),
     )
-
+# Main page ------------------------------------------------------------------------------------------------------------
     main_page = ft.Container(
         width=600,
         height=960,
@@ -338,13 +458,50 @@ def main(page: ft.Page):
                 ),
             ]
         )
-    )  # what stays the entire time
+    )
 
-    # Dictionary to combine pages as views into one and links the routing variables
-    pages = {}
+# Routing definition -------------------------------------------------------------------------------------------------
+    def route_change(e):
+        page.views.clear()
 
-    # Add pages to the application, likely just the home page that runs the entire session
-    page.add(add_page)
+        # HOME / MAIN ROUTE
+        if page.route == "/" or page.route == "":
+            page.views.append(
+                ft.View(
+                    route="/",
+                    controls=[main_page]
+                )
+            )
+        # ADD ITEM ROUTE
+        elif page.route == "/add_page":
+            page.views.append(
+                ft.View(
+                    route="/add_page",
+                    controls=[add_page]
+                )
+            )
+        #ITEM SEARCH ROUTE
+        elif page.route == '/search_page':
+            page.views.append(
+                ft.View(
+                    route='/search_page',
+                    controls = [search_page]
+                )
+            )
+        #PACK/UNPACK ROUTE
+        elif page.route == '/pack_unpack':
+            page.views.append(
+                ft.View(
+                    route='/pack_unpack',
+                    controls=[pack_unpack_page]
+                )
+            )
+        page.update()
 
+    # Attach route listener & trigger initial view
+    page.on_route_change = route_change
+    page.route = "/"
+    route_change(None)
 
-ft.run(main) #runs the entire application
+if __name__ == '__main__':
+    ft.run(main) #runs the entire application
