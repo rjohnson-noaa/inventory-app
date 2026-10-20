@@ -8,12 +8,7 @@ def int_db():
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS items
                    (
-                       id
-                       INTEGER
-                       PRIMARY
-                       KEY
-                       AUTOINCREMENT,
-                       name
+                        name
                        TEXT
                        NOT
                        NULL,
@@ -33,6 +28,7 @@ def int_db():
                    """)
     conn.commit()
     conn.close()
+
 
 # function that runs the entire app
 def main(page: ft.Page):
@@ -112,13 +108,19 @@ def main(page: ft.Page):
     inventory_table = ft.SafeArea(
                     expand=True,
                     content=fdt.DataTable2(
-                        expand=True,
+
                         empty=ft.Text("There's no way we have nothing; FIX IT!"),
                         columns=[
-                            fdt.DataColumn2(label=ft.Text("First name")),
-                            fdt.DataColumn2(label=ft.Text("Last name")),
-                            fdt.DataColumn2(label=ft.Text("Age"), numeric=True),
+                            fdt.DataColumn2(label=ft.Text("Name")),
+                            fdt.DataColumn2(label=ft.Text("Qty")),
+                            fdt.DataColumn2(label=ft.Text("Category")),
+                            fdt.DataColumn2(label=ft.Text("Location")),
+                            fdt.DataColumn2(label=ft.Text("Serial #")),
+                            fdt.DataColumn2(label=ft.Text("Expiration")),
+                            fdt.DataColumn2(label=ft.Text("Notes")),
                         ],
+                        rows=[]
+
                     ),)
 
 #item name entry
@@ -402,6 +404,7 @@ def main(page: ft.Page):
                         )
                     ]
                 ),
+                inventory_table,
                 ft.Column(controls =
                     ft.Row(spacing = 250, alignment = ft.MainAxisAlignment.CENTER,
                         controls = [cancel_btn, add_btn]
@@ -496,7 +499,7 @@ def main(page: ft.Page):
                     controls=[pack_unpack_page]
                 )
             )
-        page.update()
+    page.update()
 
     # Attach route listener & trigger initial view
     page.on_route_change = route_change
