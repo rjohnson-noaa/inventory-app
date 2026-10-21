@@ -32,6 +32,7 @@ def int_db():
 
 # function that runs the entire app
 def main(page: ft.Page):
+    int_db()
     #setting up the window to fit the tablet
     page.window.width = 600
     page.window.height = 960
@@ -74,16 +75,35 @@ def main(page: ft.Page):
         route_change(None)
 
 
+    def submit_item(e):
+        if not item_name:
+            return
+
+        new_entry = ft.DataRow(
+            cells = [
+                ft.DataCell(ft.Text(item_name.value)),
+                ft.DataCell(ft.Text(item_quantity.value)),
+                ft.DataCell(ft.Text(item_category.value)),
+                ft.DataCell(ft.Text(item_location.value)),
+                ft.DataCell(ft.Text(item_serial.value)),
+                ft.DataCell(ft.Text(item_expire.value)),
+                ft.DataCell(ft.Text(notes.value)),
+
+            ]
+        )
+
+        inventory_table.rows.append(new_entry)
+
+        # Clear input fields
+        item_name.value = ""
+        item_quantity.value = ""
+        item_location.value = None
+        item_expire.value = ''
+        item_serial.value = ''
 
 
-    #def entry_correct(e):
-       # value = item_name.value.strip() if item_name.value else ''
-
-        #if not value:
-      #      item_name.error_text = "Please enter the item name"
-      #  else:
-       #     item_name.error_text = None
-       # item_name.update()
+    # Refresh the page or update the table control
+    page.update()
 
 # Applicable lists and dropdowns----------------------------------------------------------------------------------------------
     category = ['','Sampling/Biology', 'Stationary', 'Hardware & Tools', 'Tech/Equipment', 'Chemicals', 'Rain Gear',
@@ -105,23 +125,22 @@ def main(page: ft.Page):
     dark_gray = '#686868'
 
 #data table
-    inventory_table = ft.SafeArea(
-                    expand=True,
-                    content=fdt.DataTable2(
+    inventory_table = fdt.DataTable2(
+            show_checkbox_column=True,
+            column_spacing=0,
+            empty=ft.Text("There's no way we have nothing; FIX IT!"),
+            columns=[
+                fdt.DataColumn2(label=ft.Text("Name")),
+                fdt.DataColumn2(label=ft.Text("Qty")),
+                fdt.DataColumn2(label=ft.Text("Category")),
+                fdt.DataColumn2(label=ft.Text("Location")),
+                fdt.DataColumn2(label=ft.Text("Serial #")),
+                fdt.DataColumn2(label=ft.Text("Expiration")),
+                fdt.DataColumn2(label=ft.Text("Notes")),
+            ],
+            rows=[]
 
-                        empty=ft.Text("There's no way we have nothing; FIX IT!"),
-                        columns=[
-                            fdt.DataColumn2(label=ft.Text("Name")),
-                            fdt.DataColumn2(label=ft.Text("Qty")),
-                            fdt.DataColumn2(label=ft.Text("Category")),
-                            fdt.DataColumn2(label=ft.Text("Location")),
-                            fdt.DataColumn2(label=ft.Text("Serial #")),
-                            fdt.DataColumn2(label=ft.Text("Expiration")),
-                            fdt.DataColumn2(label=ft.Text("Notes")),
-                        ],
-                        rows=[]
-
-                    ),)
+                    )
 
 #item name entry
     item_name = ft.TextField(
@@ -293,6 +312,7 @@ def main(page: ft.Page):
 
 # add button on item add page
     add_btn = ft.Button(
+        on_click = submit_item,
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
