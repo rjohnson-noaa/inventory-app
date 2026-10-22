@@ -8,22 +8,13 @@ def int_db():
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS items
                    (
-                        name
-                       TEXT
-                       NOT
-                       NULL,
-                       quantity
-                       TEXT,
-                       category
-                       TEXT,
-                       location
-                       TEXT,
-                       serial
-                       TEXT,
-                       expiration
-                       TEXT,
-                       notes
-                       TEXT
+                      name TEXT NOT NULL,
+                       quantity TEXT,
+                       category TEXT,
+                       location TEXT,
+                       serial TEXT,
+                       expiration TEXT,
+                       notes TEXT
                    )
                    """)
     conn.commit()
@@ -74,20 +65,67 @@ def main(page: ft.Page):
         page.route = route_path
         route_change(None)
 
+    def cell_text(val, size=13):
+        if isinstance(val, ft.Control):
+            if isinstance(val, ft.Text):
+                val.size = size
+                val.overflow = ft.TextOverflow.ELLIPSIS
+                val.max_lines = 1
+                val.no_wrap = True
+            return val
+        return ft.Text(
+            str(val or ""),
+            size=size,
+            overflow=ft.TextOverflow.ELLIPSIS,
+            max_lines=1,
+            no_wrap=True
+        )
+
+
 
     def submit_item(e):
-        if not item_name:
+        if not item_name.value or not item_name.value.strip():
+            item_name.error_text = "Item Name is required!"
+            item_name.update()
+
+            page.overlay.append(
+                ft.SnackBar(
+                    content=ft.Text("Item name is required!"),
+                    open=True,
+                    bgcolor=ft.Colors.RED_600,
+                )
+            )
+            page.update()
             return
 
-        new_entry = ft.DataRow(
+        if item_quantity.disabled:
+            qty_display = ft.Text("Var")
+        else:
+            qty_display = ft.Text(item_quantity.value.strip() if item_quantity.value else "0")
+
+        item_name.error_text = None
+
+        sub_loc = (
+            land_location.value if item_location.value == "Newport"
+            else ship_location.value if item_location.value == "Ship"
+            else other_location.value.strip() if item_location.value == "OTHER"
+            else ""
+        )
+
+        # Inline ternary inside f-string for location display ("Newport / NAL" or "Newport")
+        location_display = f"{item_location.value or ''}{f' / {sub_loc}' if sub_loc else ''}"
+
+
+        new_entry = ft.DataRow(on_select_change=handle_row_selection_change,
+
             cells = [
-                ft.DataCell(ft.Text(item_name.value)),
-                ft.DataCell(ft.Text(item_quantity.value)),
-                ft.DataCell(ft.Text(item_category.value)),
-                ft.DataCell(ft.Text(item_location.value)),
-                ft.DataCell(ft.Text(item_serial.value)),
-                ft.DataCell(ft.Text(item_expire.value)),
-                ft.DataCell(ft.Text(notes.value)),
+                ft.DataCell(cell_text(item_name.value)),
+                ft.DataCell(cell_text(qty_display)),
+                ft.DataCell(cell_text(ft.Text(item_category.value))),
+                ft.DataCell(cell_text(ft.Text(location_display))),
+                ft.DataCell(cell_text(ft.Text(item_serial.value))),
+                ft.DataCell(cell_text(ft.Text(item_expire.value))),
+                ft.DataCell(cell_text(ft.Text(notes.value)))
 
             ]
         )
@@ -97,15 +135,67 @@ def main(page: ft.Page):
         # Clear input fields
         item_name.value = ""
         item_quantity.value = ""
+        item_number_various.value = False
+        item_quantity.disabled = False
         item_location.value = None
+        land_location.value = None
+        land_location.visible = False
+        ship_location.visible = False
+        ship_location.value = None
+        other_location.value = ''
+        other_location.visible = False
+        serial_toggle.value = False
+        item_serial.disabled = True
+        item_expire.disabled = True
+        expire_toggle.value = False
+        item_category.value = None
         item_expire.value = ''
         item_serial.value = ''
-
+        notes.value = ''
 
     # Refresh the page or update the table control
-    page.update()
+        page.update()
 
-# Applicable lists and dropdowns----------------------------------------------------------------------------------------------
+
+
+    def clear_all_cancel (e):
+        item_name.value = ""
+        item_quantity.value = ""
+        item_number_various.value = False
+        item_category.value = ''
+        item_location.value = ''
+        land_location.value = ''
+        land_location.visible = False
+        ship_location.visible = False
+        ship_location.value = ''
+        other_location.value = ''
+        other_location.visible = False
+        serial_toggle.value = False
+        item_serial.disabled = True
+        item_expire.disabled = True
+        expire_toggle.value = False
+        item_expire.value = ''
+        item_serial.value = ''
+        notes.value = ''
+
+        for row in inventory_table.rows:
+            row.selected = False
+
+
+
+        navigate_to('/')
+
+        page.update()
+
+    def handle_row_selection_change(e: ft.Event[fdt.DataRow2]):
+        e.control.selected = not e.control.selected
+        e.control.update()
+
+
+   # def delete_selected(e):
+
+
+    # Applicable lists and dropdowns----------------------------------------------------------------------------------------------
     category = ['','Sampling/Biology', 'Stationary', 'Hardware & Tools', 'Tech/Equipment', 'Chemicals', 'Rain Gear',
                 'Safety', 'Deck', 'Miscellaneous']
     category_dd = [ft.DropdownOption(item) for item in category]
@@ -126,21 +216,27 @@ def main(page: ft.Page):
 
 #data table
     inventory_table = fdt.DataTable2(
-            show_checkbox_column=True,
-            column_spacing=0,
-            empty=ft.Text("There's no way we have nothing; FIX IT!"),
-            columns=[
-                fdt.DataColumn2(label=ft.Text("Name")),
-                fdt.DataColumn2(label=ft.Text("Qty")),
-                fdt.DataColumn2(label=ft.Text("Category")),
-                fdt.DataColumn2(label=ft.Text("Location")),
-                fdt.DataColumn2(label=ft.Text("Serial #")),
-                fdt.DataColumn2(label=ft.Text("Expiration")),
-                fdt.DataColumn2(label=ft.Text("Notes")),
-            ],
-            rows=[]
-
-                    )
+        fixed_top_rows=1,
+        heading_row_color= dark_blue,
+        data_text_style=ft.TextStyle(size=13, color = dark_blue),
+        heading_text_style=ft.TextStyle(color = white, weight= ft.FontWeight.BOLD,size=13),
+        show_checkbox_column=False,
+        min_width = 600 ,
+        column_spacing=5,
+        empty=ft.Text("There's no way we have nothing!"),
+        columns=[
+            fdt.DataColumn2(label=ft.Text("Name"), size=fdt.DataColumnSize.L),
+            fdt.DataColumn2(label=ft.Text("Qty"), size=fdt.DataColumnSize.S),
+            fdt.DataColumn2(label=ft.Text("Category"), size=fdt.DataColumnSize.M),
+            fdt.DataColumn2(label=ft.Text("Location"), size=fdt.DataColumnSize.S),
+            fdt.DataColumn2(label=ft.Text("Serial #"), size=fdt.DataColumnSize.S),
+            fdt.DataColumn2(label=ft.Text("Expiration"), size=fdt.DataColumnSize.M),
+            fdt.DataColumn2(label=ft.Text("Notes"), size=fdt.DataColumnSize.L),
+        ],
+        rows=[],
+        data_row_height=60,
+        expand = True
+                )
 
 #item name entry
     item_name = ft.TextField(
@@ -214,13 +310,13 @@ def main(page: ft.Page):
         keyboard_type=ft.KeyboardType.TEXT,
         color=ft.Colors.BLACK,
         multiline = True,
-        min_lines = 7,
+        min_lines =4 ,
         max_lines = 10
     )
 
 # serial number check box
     serial_toggle = ft.Checkbox(
-        label = 'Serial Number?',
+        label = 'Serial Number',
         on_change = serial_change
     )
 
@@ -234,7 +330,7 @@ def main(page: ft.Page):
 
 # expiration date toggle
     expire_toggle = ft.Checkbox(
-        label = 'Expiration Date?',
+        label = 'Expiration Date',
         on_change = expire_change
     )
 
@@ -264,7 +360,7 @@ def main(page: ft.Page):
                     size=40,
                     color=light_blue
                 ),
-                ft.Text('Add Item', size=35)
+                ft.Text('Add Item', size=35, color=dark_blue),
             ],
         ),
         width = 300,
@@ -283,7 +379,7 @@ def main(page: ft.Page):
                     size=40,
                     color=light_blue
                 ),
-                ft.Text('Item Search', size=35)
+                ft.Text('Item Search', size=35, color=dark_blue)
             ],
         ),
         width=300,
@@ -302,7 +398,7 @@ def main(page: ft.Page):
                     size=40,
                     color=light_blue
                 ),
-                ft.Text('Pack/Unpack', size=35)
+                ft.Text('Pack/Unpack', size=35, color=dark_blue),
             ],
         ),
         width=300,
@@ -318,10 +414,10 @@ def main(page: ft.Page):
             controls=[
                 ft.Icon(
                     icon=ft.Icons.ADD,
-                    size=20,
+                    size=25,
                     color=ft.Colors.GREEN
                 ),
-                ft.Text('Add', size=15)
+                ft.Text('Add', size=15, color=dark_blue)
             ],
         ),
         width=125,
@@ -331,16 +427,16 @@ def main(page: ft.Page):
 
 # cancel button on add item page, item search page, and item pack page
     cancel_btn = ft.Button(
-        on_click = lambda _: navigate_to('/'),
+        on_click = clear_all_cancel,
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
                 ft.Icon(
                     icon=ft.Icons.CANCEL,
-                    size=20,
+                    size=25,
                     color=ft.Colors.RED
                 ),
-                ft.Text('Cancel', size=15)
+                ft.Text('Cancel', size=15, color=dark_blue),
             ],
         ),
         width=125,
@@ -385,7 +481,7 @@ def main(page: ft.Page):
                        )
                    ]
                 ),
-                inventory_table,
+                ft.Container(height = 400, content = ft.Column(controls = [inventory_table])),
                 ft.Column(controls=
                     ft.Row(
                         spacing=250,
@@ -424,7 +520,7 @@ def main(page: ft.Page):
                         )
                     ]
                 ),
-                inventory_table,
+                ft.Container(height = 400, content = ft.Column(controls = [inventory_table])),
                 ft.Column(controls =
                     ft.Row(spacing = 250, alignment = ft.MainAxisAlignment.CENTER,
                         controls = [cancel_btn, add_btn]
