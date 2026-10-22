@@ -2,23 +2,25 @@ import flet as ft
 import flet_datatable2 as fdt
 import sqlite3
 
+conn = sqlite3.connect('inventory.db', check_same_thread=False)
+cursor = conn.cursor()
+
 def int_db():
-    conn = sqlite3.connect('inventory.db')
-    cursor = conn.cursor()
+
     cursor.execute("""
-                   CREATE TABLE IF NOT EXISTS items
+                   CREATE TABLE IF NOT EXISTS inventory
                    (
-                      name TEXT NOT NULL,
-                       quantity TEXT,
-                       category TEXT,
-                       location TEXT,
-                       serial TEXT,
-                       expiration TEXT,
-                       notes TEXT
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    quantity TEXT,
+                    category TEXT,
+                    location TEXT,
+                    serial TEXT,
+                    expiration TEXT,
+                    notes TEXT
                    )
                    """)
     conn.commit()
-    conn.close()
 
 
 # function that runs the entire app
@@ -99,9 +101,9 @@ def main(page: ft.Page):
             return
 
         if item_quantity.disabled:
-            qty_display = ft.Text("Var")
+            qty_display = "Var"
         else:
-            qty_display = ft.Text(item_quantity.value.strip() if item_quantity.value else "0")
+            qty_display = item_quantity.value.strip() if item_quantity.value else "0"
 
         item_name.error_text = None
 
@@ -119,18 +121,32 @@ def main(page: ft.Page):
         new_entry = ft.DataRow(on_select_change=handle_row_selection_change,
 
             cells = [
-                ft.DataCell(cell_text(item_name.value)),
-                ft.DataCell(cell_text(qty_display)),
-                ft.DataCell(cell_text(ft.Text(item_category.value))),
-                ft.DataCell(cell_text(ft.Text(location_display))),
-                ft.DataCell(cell_text(ft.Text(item_serial.value))),
-                ft.DataCell(cell_text(ft.Text(item_expire.value))),
+                ft.DataCell(ft.Text(item_name.value)),
+                ft.DataCell(ft.Text(qty_display)),
+                ft.DataCell(ft.Text(item_category.value)),
+                ft.DataCell(ft.Text(location_display)),
+                ft.DataCell(ft.Text(item_serial.value)),
+                ft.DataCell(ft.Text(item_expire.value)),
                 ft.DataCell(cell_text(ft.Text(notes.value)))
 
             ]
         )
 
         inventory_table.rows.append(new_entry)
+
+        cursor.execute("""
+                       INSERT INTO inventory (name, quantity, category, location, serial, expiration, notes)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)
+                       """, (
+                           item_name.value,
+                           qty_display,
+                           item_category.value,
+                           location_display,
+                           item_serial.value,
+                           item_expire.value,
+                           notes.value
+                       ))
+        conn.commit()
 
         # Clear input fields
         item_name.value = ""
@@ -152,6 +168,8 @@ def main(page: ft.Page):
         item_expire.value = ''
         item_serial.value = ''
         notes.value = ''
+
+        load_item()
 
     # Refresh the page or update the table control
         page.update()
@@ -181,8 +199,6 @@ def main(page: ft.Page):
         for row in inventory_table.rows:
             row.selected = False
 
-
-
         navigate_to('/')
 
         page.update()
@@ -191,8 +207,44 @@ def main(page: ft.Page):
         e.control.selected = not e.control.selected
         e.control.update()
 
+    def load_item():
 
-   # def delete_selected(e):
+        inventory_table.rows.clear()
+
+        cursor.execute(
+            "SELECT id, name, quantity, category, location, serial, expiration, notes FROM inventory"
+        )
+        for row in cursor.fetchall():
+            data_row = ft.DataRow(
+                on_select_change=handle_row_selection_change,
+                cells=[
+                    ft.DataCell(ft.Text(str(row[1]))),  # name
+                    ft.DataCell(ft.Text(row[2] or "")),  # quantity
+                    ft.DataCell(ft.Text(row[3] or "")),  # category
+                    ft.DataCell(ft.Text(row[4] or "")),  # location
+                    ft.DataCell(ft.Text(row[5] or "")),  # serial
+                    ft.DataCell(ft.Text(row[6] or "")),  # expiration
+                    ft.DataCell(cell_text(ft.Text(row[7] or ""))),  # notes
+                ]
+            )
+            data_row.data = row[0]  # Store the 'id' value on the DataRow object
+            inventory_table.rows.append(data_row)
+
+        inventory_table.update()
+
+
+    def delete_selected(e):
+        selected_rows = [row for row in inventory_table.rows if row.selected]
+
+        if not selected_rows:
+            return
+
+        for row in selected_rows:
+            item_id = row.data  # Gets the primary key 'id'
+            cursor.execute("DELETE FROM inventory WHERE id = ?", (item_id,))
+
+        conn.commit()
+        load_item()
 
 
     # Applicable lists and dropdowns----------------------------------------------------------------------------------------------
@@ -444,6 +496,27 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
+    delete_btn = ft.Button(
+        on_click=delete_selected,
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            controls=[
+                ft.Icon(
+                    icon=ft.Icons.DELETE,
+                    size=25,
+                    color=ft.Colors.RED
+                ),
+                ft.Text('Delete', size=15, color=dark_blue),
+            ],
+        ),
+        width=125,
+        height=62.5,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+    )
+
+
+
+
     # Defined pages-------------------------------------------------------------------------------------------------
 
 # Packing page --------------------------------------------------------------------------------------------------------
@@ -522,8 +595,8 @@ def main(page: ft.Page):
                 ),
                 ft.Container(height = 400, content = ft.Column(controls = [inventory_table])),
                 ft.Column(controls =
-                    ft.Row(spacing = 250, alignment = ft.MainAxisAlignment.CENTER,
-                        controls = [cancel_btn, add_btn]
+                    ft.Row(spacing = 20, alignment = ft.MainAxisAlignment.CENTER,
+                        controls = [cancel_btn, delete_btn, add_btn]
                     )
                 )
             ],
@@ -599,6 +672,9 @@ def main(page: ft.Page):
                     controls=[add_page]
                 )
             )
+            page.update()
+            load_item()  # Load AFTER rendering page
+            return
         #ITEM SEARCH ROUTE
         elif page.route == '/search_page':
             page.views.append(
@@ -607,8 +683,12 @@ def main(page: ft.Page):
                     controls = [search_page]
                 )
             )
+            page.update()
+            load_item()  # Load AFTER rendering page
+            return
         #PACK/UNPACK ROUTE
         elif page.route == '/pack_unpack':
+            load_item()
             page.views.append(
                 ft.View(
                     route='/pack_unpack',
