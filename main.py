@@ -27,9 +27,12 @@ def int_db():
 def main(page: ft.Page):
     int_db()
     #setting up the window to fit the tablet
-    page.window.width = 650
+    page.window.width = 600
     page.window.height = 960
     page.window.resizable = True
+    page.padding = 0
+    page.spacing = 0
+    page.window.center()
 
 #definitions ---------------------------------------------------------------------------------------------------------
     def quantity_change(e):
@@ -66,7 +69,7 @@ def main(page: ft.Page):
         page.route = route_path
         route_change(None)
 
-    def cell_text(val, size=12):
+    def cell_text(val, size=13):
         if isinstance(val, ft.Control):
             if isinstance(val, ft.Text):
                 val.size = size
@@ -269,11 +272,11 @@ def main(page: ft.Page):
     inventory_table = fdt.DataTable2(
         fixed_top_rows=1,
         heading_row_color= dark_blue,
-        data_text_style=ft.TextStyle(size=12, color = dark_blue),
-        heading_text_style=ft.TextStyle(color = white, weight= ft.FontWeight.BOLD,size=12),
+        data_text_style=ft.TextStyle(size=11, color = dark_blue),
+        heading_text_style=ft.TextStyle(color = white, weight= ft.FontWeight.BOLD,size=11),
         show_checkbox_column=False,
         min_width = 600 ,
-        column_spacing=3,
+        column_spacing=5,
         empty=ft.Text("There's no way we have nothing!"),
         columns=[
             fdt.DataColumn2(label=ft.Text("Name"), size=fdt.DataColumnSize.L),
@@ -360,9 +363,7 @@ def main(page: ft.Page):
         hint_text='Optional',
         keyboard_type=ft.KeyboardType.TEXT,
         color=ft.Colors.BLACK,
-        multiline = True,
-        min_lines =4 ,
-        max_lines = 10
+        multiline = True
     )
 
 # serial number check box
@@ -408,10 +409,10 @@ def main(page: ft.Page):
             controls=[
                 ft.Icon(
                     icon=ft.Icons.ADD,
-                    size=40,
+                    size=30,
                     color=light_blue
                 ),
-                ft.Text('Add Item', size=35, color=dark_blue),
+                ft.Text('Add Item', size=25, color=dark_blue),
             ],
         ),
         width = 300,
@@ -427,7 +428,7 @@ def main(page: ft.Page):
             controls=[
                 ft.Icon(
                     icon=ft.Icons.SEARCH,
-                    size=40,
+                    size=30,
                     color=light_blue
                 ),
                 ft.Text('Item Search', size=25, color=dark_blue)
@@ -446,7 +447,7 @@ def main(page: ft.Page):
             controls=[
                 ft.Icon(
                     icon=ft.Icons.INVENTORY_2_OUTLINED,
-                    size=40,
+                    size=30,
                     color=light_blue
                 ),
                 ft.Text('Pack/Unpack', size=25, color=dark_blue),
@@ -485,7 +486,7 @@ def main(page: ft.Page):
                 ft.Icon(
                     icon=ft.Icons.CANCEL,
                     size=25,
-                    color=ft.Colors.RED
+                    color=dark_gray
                 ),
                 ft.Text('Cancel', size=15, color=dark_blue),
             ],
@@ -527,14 +528,16 @@ def main(page: ft.Page):
             controls =[
                 ft.AppBar(
                     leading=ft.Container(
-                        padding=ft.Padding(left=15),
+                        padding=ft.Padding.only(left=15),
                         content=ft.Row(
                             controls=[ft.Text('Item Search', size=20,
                                               style=ft.TextStyle(weight=ft.FontWeight.BOLD, color=white))],
                         )
                     ),
                     bgcolor=dark_gray,
-                    center_title=False
+                    center_title=False,
+                    toolbar_height=10
+
                 ),
                 ft.Row(
                     spacing=100,
@@ -566,8 +569,8 @@ def main(page: ft.Page):
     )
 
 #Add item page----------------------------------------------------------------------------------------------------------
-    add_page = ft.Container(
-        content=ft.Column(
+    add_page = ft.Container(expand=True, bgcolor = gray,
+        content=ft.Column( expand=True,
             controls =[
                 ft.AppBar(
                     leading = ft.Container(
@@ -577,7 +580,7 @@ def main(page: ft.Page):
                         )
                     ),
                     bgcolor=dark_gray,
-                    center_title=False
+                    center_title=False,
                 ),
                 ft.Row(spacing = 100 , alignment=ft.MainAxisAlignment.CENTER, vertical_alignment = ft.CrossAxisAlignment.START,
                     controls = [
@@ -592,7 +595,7 @@ def main(page: ft.Page):
                         )
                     ]
                 ),
-                ft.Container(height = 350, content = ft.Column(controls = [inventory_table])),
+                ft.Container(height = 330, content = ft.Column(controls = [inventory_table])),
                 ft.Column(controls =
                     ft.Row(spacing = 20, alignment = ft.MainAxisAlignment.CENTER,
                         controls = [cancel_btn, delete_btn, add_btn]
@@ -603,20 +606,19 @@ def main(page: ft.Page):
     )
 # Main page ------------------------------------------------------------------------------------------------------------
     main_page = ft.Container(
-        width=600,
-        height=900,
+        expand=True,
         bgcolor=gray,
         content=ft.Column(
             controls= [
                 ft.AppBar(
                     leading = ft.Container(
-                        padding = ft.Padding.only(left=60),
+                        padding = 15,
                         content=ft.Image(
-                        src = 'C:/Git/inventory-app/noaalogo.png'
+                        src = '../inventory-app/noaalogo.png'
                         )
                     ),
-                    leading_width = 130,
-                    title = ft.Text('IWCPS Inventory', size=30, style=ft.TextStyle(weight=ft.FontWeight.BOLD, color=white)),
+                    leading_width = 90,
+                    title = ft.Text('IWCPS Inventory', size=40, style=ft.TextStyle(weight=ft.FontWeight.BOLD, color=white)),
                     center_title=True,
                     bgcolor=dark_gray,
                     toolbar_height = 100
@@ -668,7 +670,9 @@ def main(page: ft.Page):
             page.views.append(
                 ft.View(
                     route="/add_page",
-                    controls=[add_page]
+                    controls=[add_page],
+                    padding=0,
+                    spacing=0,
                 )
             )
             page.update()
@@ -679,7 +683,9 @@ def main(page: ft.Page):
             page.views.append(
                 ft.View(
                     route='/search_page',
-                    controls = [search_page]
+                    controls = [search_page],
+                    padding=0,
+                    spacing=0,
                 )
             )
             page.update()
@@ -691,7 +697,9 @@ def main(page: ft.Page):
             page.views.append(
                 ft.View(
                     route='/pack_unpack',
-                    controls=[pack_unpack_page]
+                    controls=[pack_unpack_page],
+                    padding=0,
+                    spacing=0,
                 )
             )
     page.update()
