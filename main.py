@@ -396,9 +396,10 @@ def main(page: ft.Page):
     )
 
 #keyword textfield for searching
-    keyword = ft.TextField(
-        label = 'Keyword',
-        width = 210
+    keyword_search = ft.TextField(
+        label = 'Search items',
+        hint_text = "Name, location, category...",
+        width = 450
     )
 
 #add item button on main page
@@ -545,14 +546,8 @@ def main(page: ft.Page):
                     vertical_alignment=ft.CrossAxisAlignment.START,
                     controls=[
                        ft.Column(spacing=15, controls=[
-                           keyword, item_category, item_location, land_location, ship_location, other_location
-                       ]),
-                       ft.Column(
-                           spacing=15,
-                           controls=[
-                               ft.Column(controls=[serial_toggle, expire_toggle])
-                           ]
-                       )
+                           keyword_search
+                       ])
                    ]
                 ),
                 ft.Container(height = 420, content = ft.Column(controls = [inventory_table])),
