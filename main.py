@@ -27,8 +27,8 @@ def int_db():
 def main(page: ft.Page):
     int_db()
     #setting up the window to fit the tablet
-    page.window.width = 600
     page.window.height = 960
+    page.window.width = 600
     page.window.resizable = True
     page.padding = 0
     page.spacing = 0
@@ -536,7 +536,7 @@ def main(page: ft.Page):
                     ),
                     bgcolor=dark_gray,
                     center_title=False,
-                    toolbar_height=10
+                    toolbar_height=40
 
                 ),
                 ft.Row(
@@ -550,13 +550,12 @@ def main(page: ft.Page):
                        ft.Column(
                            spacing=15,
                            controls=[
-                               ft.Column(controls=[serial_toggle, item_serial]),
-                               ft.Column(controls=[expire_toggle, item_expire]),
+                               ft.Column(controls=[serial_toggle, expire_toggle])
                            ]
                        )
                    ]
                 ),
-                ft.Container(height = 400, content = ft.Column(controls = [inventory_table])),
+                ft.Container(height = 420, content = ft.Column(controls = [inventory_table])),
                 ft.Column(controls=
                     ft.Row(
                         spacing=250,
@@ -608,7 +607,7 @@ def main(page: ft.Page):
     main_page = ft.Container(
         expand=True,
         bgcolor=gray,
-        content=ft.Column(
+        content=ft.Column(expand=True,
             controls= [
                 ft.AppBar(
                     leading = ft.Container(
@@ -662,7 +661,9 @@ def main(page: ft.Page):
             page.views.append(
                 ft.View(
                     route="/",
-                    controls=[main_page]
+                    controls=[main_page],
+                    padding=0,
+                    spacing=0,
                 )
             )
         # ADD ITEM ROUTE
