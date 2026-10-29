@@ -2,6 +2,9 @@ import flet as ft
 import flet_datatable2 as fdt
 import sqlite3
 
+
+
+# database creation -------------------------------------------------------------------------------------------------------
 conn = sqlite3.connect('inventory.db', check_same_thread=False)
 cursor = conn.cursor()
 
@@ -25,7 +28,7 @@ def int_db():
 
 # function that runs the entire app
 def main(page: ft.Page):
-    int_db()
+    int_db() #call the database in the main function
     #setting up the window to fit the tablet
     page.window.height = 960
     page.window.width = 600
@@ -34,23 +37,35 @@ def main(page: ft.Page):
     page.spacing = 0
     page.window.center()
 
-#definitions ---------------------------------------------------------------------------------------------------------
-    def quantity_change(e):
+# ADD PAGE functions and items ----------------------------------------------------------------------------------------
+    item_name = ft.TextField(  #item name textfield
+        label='Item Name',
+        width=210,
+        hint_text='Enter item name',
+        keyboard_type=ft.KeyboardType.TEXT,
+        color=ft.Colors.BLACK
+    )
+
+    def quantity_change(e): #disables the item quantity textfield
         item_quantity.disabled = e.control.value
         item_quantity.value = ''
         item_quantity.update()
 
-    def serial_change(e):
-        item_serial.disabled = not e.control.value
-        item_serial.value = ''
-        item_serial.update()
+    item_quantity = ft.TextField(  #item quantity textfield
+        label='Quantity',
+        width=210,
+        hint_text='# or click various',
+        keyboard_type=ft.KeyboardType.NUMBER,
+        color=ft.Colors.BLACK,
+        disabled=False,
+        input_filter=ft.NumbersOnlyInputFilter()
+    )
+    item_number_various = ft.Checkbox(  #checkbox that marks the item quantity as various and disables item quantity textfield
+        label='Various',
+        on_change=quantity_change
+    )
 
-    def expire_change(e):
-        item_expire.disabled = not e.control.value
-        item_expire.value = ''
-        item_expire.update()
-
-    def location_visible(e):
+    def location_visible(e): #makes sublocations visible depending on main location selection
         selected_value = e.control.value
 
         land_location.visible = (selected_value == 'Newport')
@@ -64,6 +79,108 @@ def main(page: ft.Page):
         land_location.update()
         ship_location.update()
         other_location.update()
+
+    location = ['', 'Newport', 'Ship', 'OTHER']  #list of item main locations
+    location_dd = [ft.DropdownOption(item) for item in location] #turns the list items into dropdown options
+
+    item_location = ft.Dropdown(   #main item location dropdown (Newport, ship, other)
+        label='Item Location',
+        on_select=location_visible,
+        width=210,
+        options=location_dd
+    )
+
+    land_home = ['', 'NAL', 'BFB', 'Chemical Shed'] #list of item land locations
+    land_home_dd = [ft.DropdownOption(item) for item in land_home] #turns the list items into dropdown options
+
+    land_location = ft.Dropdown(  #Newport location dropdown (BFB, NAL, chem shed)
+        label='Newport Location',
+        visible=False,
+        width=210,
+        options=land_home_dd
+    )
+
+    ship_home = ['', 'Wet Lab', 'Acoustics', 'Chem Lab'] #list of item ship locations
+    ship_home_dd = [ft.DropdownOption(item) for item in ship_home]#turns the list items into dropdown options
+
+    ship_location = ft.Dropdown(   #ship location dropdown (wet lab, acoustics, chemlab)
+        label='Ship Location',
+        width=210,
+        visible=False,
+        options=ship_home_dd
+    )
+
+    other_location = ft.TextField(   #other location textfield
+        label='Other location',
+        visible=False,
+        width=210
+    )
+
+    category = ['', 'Sampling/Biology', 'Stationary', 'Hardware & Tools', 'Tech/Equipment', 'Chemicals', 'Rain Gear',
+                'Safety', 'Deck', 'Miscellaneous'] #list of item categories
+    category_dd = [ft.DropdownOption(item) for item in category] #turns the list items into dropdown options
+
+    item_category = ft.Dropdown(
+        label='Item Category',
+        width=210,
+        options=category_dd
+    ) #item category dropdown
+
+    notes = ft.TextField(
+        label='Notes (optional)',
+        width=210,
+        hint_text='Optional',
+        keyboard_type=ft.KeyboardType.TEXT,
+        color=ft.Colors.BLACK,
+        multiline=True
+    ) #item notes textfield
+
+    def serial_change(e): #enables the serial number textfield
+        item_serial.disabled = not e.control.value
+        item_serial.value = ''
+        item_serial.update()
+
+    item_serial = ft.TextField(
+        label='Item Serial #',
+        width=210,
+        keyboard_type=ft.KeyboardType.NUMBER,
+        disabled=True
+    ) #item serial number textfield
+
+    serial_toggle = ft.Checkbox(
+        label='Serial Number',
+        on_change=serial_change
+    ) #checkbox that enables the serial number textfield
+
+    def expire_change(e): #enables the item expiration date textfield
+        item_expire.disabled = not e.control.value
+        item_expire.value = ''
+        item_expire.update()
+
+        # expiration date entry
+    item_expire = ft.TextField(    #item expiration date textfield
+        label='Item Expiration Date',
+        width=210,
+        hint_text='(MM/YY)',
+        keyboard_type=ft.KeyboardType.DATETIME,
+        disabled=True
+    )
+
+    expire_toggle = ft.Checkbox(   #checkbox to enable the expiration date textfield
+        label='Expiration Date',
+        on_change=expire_change
+    )
+
+
+
+#definitions ---------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
 
     def navigate_to(route_path):
         page.route = route_path
@@ -176,7 +293,13 @@ def main(page: ft.Page):
     # Refresh the page or update the table control
         page.update()
 
+    def edit_item(e):
+        selected_rows = [row for row in inventory_table.rows if row.selected]
 
+        if not selected_rows:
+            return
+
+        #for row in selected_rows:
 
     def clear_all_cancel (e):
         item_name.value = ""
@@ -250,15 +373,10 @@ def main(page: ft.Page):
 
 
     # Applicable lists and dropdowns----------------------------------------------------------------------------------------------
-    category = ['','Sampling/Biology', 'Stationary', 'Hardware & Tools', 'Tech/Equipment', 'Chemicals', 'Rain Gear',
-                'Safety', 'Deck', 'Miscellaneous']
-    category_dd = [ft.DropdownOption(item) for item in category]
-    land_home = ['','NAL', 'BFB', 'Chemical Shed']
-    land_home_dd = [ft.DropdownOption(item) for item in land_home]
-    ship_home = ['','Wet Lab', 'Acoustics', 'Chem Lab']
-    ship_home_dd = [ft.DropdownOption(item) for item in ship_home]
-    location = ['','Newport', 'Ship', 'OTHER'] #POPULATE SHIP, NEWPORT, OR OTHER
-    location_dd = [ft.DropdownOption(item) for item in location]
+
+
+
+
     packing_bin = []  # append when bins are entered
 
 # All other page elements ------------------------------------------------------------------------------------------
@@ -293,107 +411,7 @@ def main(page: ft.Page):
                 )
 
 #item name entry
-    item_name = ft.TextField(
-        label='Item Name',
-        width = 210,
-        hint_text='Enter item name',
-        keyboard_type=ft.KeyboardType.TEXT,
-        color=ft.Colors.BLACK
-    )
 
-# various check box
-    item_number_various = ft.Checkbox(
-        label='Various',
-        on_change=quantity_change
-    )
-
-#item quantity entry
-    item_quantity = ft.TextField(
-        label='Quantity',
-        width=210,
-        hint_text='# or click various',
-        keyboard_type=ft.KeyboardType.NUMBER,
-        color=ft.Colors.BLACK,
-        disabled=False,
-        input_filter = ft.NumbersOnlyInputFilter()
-    )
-
-#item location, newport, ship or other
-    item_location = ft.Dropdown(
-        label = 'Item Location',
-        on_select=location_visible,
-        width=210,
-        options=location_dd
-    )
-
-#newport location
-    land_location = ft.Dropdown(
-        label='Newport Location',
-        visible = False,
-        width=210,
-        options=land_home_dd
-    )
-
-#ship location
-    ship_location = ft.Dropdown(
-        label='Ship Location',
-        width=210,
-        visible = False,
-        options=ship_home_dd
-    )
-
-#other location entry
-    other_location = ft.TextField(
-        label= 'Other location',
-        visible = False,
-        width=210
-    )
-
-#item category
-    item_category = ft.Dropdown(
-        label='Item Category',
-        width=210,
-        options=category_dd
-    )
-
-#notes text field
-    notes = ft.TextField(
-        label='Notes (optional)',
-        width=210,
-        hint_text='Optional',
-        keyboard_type=ft.KeyboardType.TEXT,
-        color=ft.Colors.BLACK,
-        multiline = True
-    )
-
-# serial number check box
-    serial_toggle = ft.Checkbox(
-        label = 'Serial Number',
-        on_change = serial_change
-    )
-
-# serial number entry
-    item_serial = ft.TextField(
-        label = 'Item Serial #',
-        width=210,
-        keyboard_type=ft.KeyboardType.NUMBER,
-        disabled=True
-    )
-
-# expiration date toggle
-    expire_toggle = ft.Checkbox(
-        label = 'Expiration Date',
-        on_change = expire_change
-    )
-
-# expiration date entry
-    item_expire = ft.TextField(
-        label='Item Expiration Date',
-        width=210,
-        hint_text='(MM/YY)',
-        keyboard_type=ft.KeyboardType.DATETIME,
-        disabled=True
-    )
 
 #keyword textfield for searching
     keyword_search = ft.TextField(
@@ -515,7 +533,23 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
-
+    edit_btn = ft.Button(
+        on_click=edit_item,
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            controls=[
+                ft.Icon(
+                    icon=ft.Icons.EDIT,
+                    size=25,
+                    color=light_blue
+                ),
+                ft.Text('Edit', size=15, color=dark_blue),
+            ],
+        ),
+        width=125,
+        height=62.5,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+    )
 
 
     # Defined pages-------------------------------------------------------------------------------------------------
@@ -524,6 +558,10 @@ def main(page: ft.Page):
     pack_unpack_page = ft.Container()
 
 # Search item page -----------------------------------------------------------------------------------------------------
+
+    item_popup = ft.Container(bgcolor = light_blue)
+
+
     search_page = ft.Container(
         content=ft.Column(
             controls =[
@@ -552,11 +590,9 @@ def main(page: ft.Page):
                 ),
                 ft.Container(height = 420, content = ft.Column(controls = [inventory_table])),
                 ft.Column(controls=
-                    ft.Row(
-                        spacing=250,
-                        alignment=ft.MainAxisAlignment.CENTER,
-                        controls=[cancel_btn]#add search button
-                    )
+                  ft.Row(spacing=20, alignment=ft.MainAxisAlignment.CENTER,
+                         controls=[cancel_btn, delete_btn, edit_btn]
+                         )
                 ),
             ]
         )
@@ -592,7 +628,7 @@ def main(page: ft.Page):
                 ft.Container(height = 330, content = ft.Column(controls = [inventory_table])),
                 ft.Column(controls =
                     ft.Row(spacing = 20, alignment = ft.MainAxisAlignment.CENTER,
-                        controls = [cancel_btn, delete_btn, add_btn]
+                        controls = [cancel_btn, delete_btn, edit_btn, add_btn]
                     )
                 )
             ],
@@ -704,6 +740,7 @@ def main(page: ft.Page):
     page.on_route_change = route_change
     page.route = "/"
     route_change(None)
+
 
 if __name__ == '__main__':
     ft.run(main) #runs the entire application
