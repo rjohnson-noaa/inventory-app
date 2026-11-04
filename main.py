@@ -3,13 +3,11 @@ import flet_datatable2 as fdt
 import sqlite3
 
 
-
 # database creation -------------------------------------------------------------------------------------------------------
 conn = sqlite3.connect('inventory.db', check_same_thread=False)
 cursor = conn.cursor()
 
 def int_db():
-
     cursor.execute("""
                    CREATE TABLE IF NOT EXISTS inventory
                    (
@@ -26,11 +24,10 @@ def int_db():
     conn.commit()
 
 
-
 # function that runs the entire app ------------------------------------------------------------------------------------
 def main(page: ft.Page):
-    int_db() #call the database in the main function
-    #setting up the window to fit the tablet
+    int_db()  # call the database in the main function
+    # setting up the window to fit the tablet
     page.window.height = 960
     page.window.width = 600
     page.window.resizable = True
@@ -45,16 +42,21 @@ def main(page: ft.Page):
     location = ['', 'Newport', 'Ship', 'OTHER']  # list of item main locations
     location_dd = [ft.DropdownOption(item) for item in location]  # turns the list items into dropdown options
 
+    land_home = ['', 'NAL', 'BFB', 'Chemical Shed']  # list of item land locations
+    land_home_dd = [ft.DropdownOption(item) for item in land_home]  # turns the list items into dropdown options
 
-#Defined NOAA Colors --------------------------------------------------------------------------------------------------
+    ship_home = ['', 'Wet Lab', 'Acoustics', 'Chem Lab']  # list of item ship locations
+    ship_home_dd = [ft.DropdownOption(item) for item in ship_home]  # turns the list items into dropdown options
+
+    # Defined NOAA Colors --------------------------------------------------------------------------------------------------
     dark_blue = '#003087'
     light_blue = '#0085CA'
     white = 'white'
     gray = '#F0F0F0'
     dark_gray = '#686868'
 
-# MAIN PAGE functions and items -------------------------------------------------------------------
-    add_item_btn = ft.Button(    #add item button
+    # MAIN PAGE functions and items -------------------------------------------------------------------
+    add_item_btn = ft.Button(  # add item button
         on_click=lambda _: navigate_to('/add_page'),
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
@@ -72,7 +74,7 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
-    search_item_btn = ft.Button(    # search item button on main page
+    search_item_btn = ft.Button(  # search item button on main page
         on_click=lambda _: navigate_to('/search_page'),
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
@@ -90,7 +92,7 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
-    pack_unpack_btn = ft.Button(   # pack/unpack button on main page
+    pack_unpack_btn = ft.Button(  # pack/unpack button on main page
         on_click=lambda _: navigate_to('/pack_unpack'),
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
@@ -123,10 +125,10 @@ def main(page: ft.Page):
                     title=ft.Text('IWCPS Inventory',
                                   size=40,
                                   style=ft.TextStyle(weight=ft.FontWeight.BOLD, color=white)),
-                                  center_title=True,
-                                  bgcolor=dark_gray,
-                                  toolbar_height=100
-                              ),
+                    center_title=True,
+                    bgcolor=dark_gray,
+                    toolbar_height=100
+                ),
                 ft.Container(height=130),
                 ft.Column(
                     expand=True,
@@ -151,8 +153,8 @@ def main(page: ft.Page):
         )
     )
 
-#DATA TABLE aspects ---------------------------------------------------------------------------------------------------
-    def cell_text(val, size=13):    # Makes the overflow text into an ellipsis in the data table
+    # DATA TABLE aspects ---------------------------------------------------------------------------------------------------
+    def cell_text(val, size=13):  # Makes the overflow text into an ellipsis in the data table
         if isinstance(val, ft.Control):
             if isinstance(val, ft.Text):
                 val.size = size
@@ -168,7 +170,7 @@ def main(page: ft.Page):
             no_wrap=True
         )
 
-    def submit_item(e):     #function that adds an item into the database and table
+    def submit_item(e):  # function that adds an item into the database and table
         if not item_name.value or not item_name.value.strip():
             item_name.error_text = "Item Name is required!"
             item_name.update()
@@ -198,23 +200,6 @@ def main(page: ft.Page):
         )
 
         location_display = f"{item_location.value or ''}{f' / {sub_loc}' if sub_loc else ''}"
-
-
-        new_entry = ft.DataRow(on_select_change=handle_row_selection_change,
-
-            cells = [
-                ft.DataCell(ft.Text(item_name.value)),
-                ft.DataCell(ft.Text(qty_display)),
-                ft.DataCell(ft.Text(item_category.value)),
-                ft.DataCell(ft.Text(location_display)),
-                ft.DataCell(ft.Text(item_serial.value)),
-                ft.DataCell(ft.Text(item_expire.value)),
-                ft.DataCell(cell_text(ft.Text(notes.value)))
-
-            ]
-        )
-
-        inventory_table.rows.append(new_entry)
 
         cursor.execute("""
                        INSERT INTO inventory (name, quantity, category, location, serial, expiration, notes)
@@ -254,7 +239,7 @@ def main(page: ft.Page):
         load_item()
         page.update()
 
-    def clear_all_cancel (e):    #clears all fields when navigating off the page
+    def clear_all_cancel(e):  # clears all fields when navigating off the page
         item_name.value = ""
         item_quantity.value = ""
         item_number_various.value = False
@@ -278,20 +263,44 @@ def main(page: ft.Page):
             row.selected = False
 
         navigate_to('/')
-
         page.update()
 
-    def handle_row_selection_change(e: ft.Event[fdt.DataRow2]):   #row selection in the datatable
+    def handle_row_selection_change(e: ft.Event[fdt.DataRow2]):  # row selection in the datatable
         e.control.selected = not e.control.selected
         e.control.update()
 
-    def load_item():    #loads items from the DB into the app so they are saved upon opening and closing
-
+    def load_item(
+            search_query: str = ""):  # loads items from the DB into the app so they are saved upon opening and closing
         inventory_table.rows.clear()
 
-        cursor.execute(
-            "SELECT id, name, quantity, category, location, serial, expiration, notes FROM inventory"
-        )
+        query_str = (search_query or "").strip()
+
+        if query_str:
+            sql = """
+                  SELECT id, \
+                         name, \
+                         quantity, \
+                         category, \
+                         location, \
+                         serial, \
+                         expiration, \
+                         notes
+                  FROM inventory
+                  WHERE name LIKE ?
+                     OR quantity LIKE ?
+                     OR category LIKE ?
+                     OR location LIKE ?
+                     OR serial LIKE ?
+                     OR expiration LIKE ?
+                     OR notes LIKE ? \
+                  """
+            wildcard = f"%{query_str}%"
+            cursor.execute(sql, (wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard))
+        else:
+            cursor.execute(
+                "SELECT id, name, quantity, category, location, serial, expiration, notes FROM inventory"
+            )
+
         for row in cursor.fetchall():
             data_row = ft.DataRow(
                 on_select_change=handle_row_selection_change,
@@ -310,7 +319,7 @@ def main(page: ft.Page):
 
         inventory_table.update()
 
-    def delete_selected(e):      # deletes the selected item in the table
+    def delete_selected(e):  # deletes the selected item in the table
         selected_rows = [row for row in inventory_table.rows if row.selected]
 
         if not selected_rows:
@@ -323,117 +332,240 @@ def main(page: ft.Page):
         conn.commit()
         load_item()
 
+    # MULTI-ITEM EDIT DIALOG STATE & FUNCTIONS -------------------------------------------------------------
+    active_edit_fields = []  # List of dictionaries holding each item's input controls
+
+    def close_popup(e):
+        edit_dialog_popup.open = False
+        page.update()
+
+    def save_edited_items(e):
+        # Validate that all items have a name
+        has_error = False
+        for fields in active_edit_fields:
+            if not fields["name"].value or not fields["name"].value.strip():
+                fields["name"].error_text = "Name required"
+                fields["name"].update()
+                has_error = True
+            else:
+                fields["name"].error_text = None
+                fields["name"].update()
+
+        if has_error:
+            return
+
+        for fields in active_edit_fields:
+            sub_loc = (
+                fields["land"].value if fields["location"].value == "Newport"
+                else fields["ship"].value if fields["location"].value == "Ship"
+                else fields["other"].value.strip() if fields["location"].value == "OTHER"
+                else ""
+            )
+
+            edit_location_display = f"{fields['location'].value or ''}{f' / {sub_loc}' if sub_loc else ''}"
+
+            cursor.execute("""
+                           UPDATE inventory
+                           SET name       = ?,
+                               quantity   = ?,
+                               category   = ?,
+                               location   = ?,
+                               serial     = ?,
+                               expiration = ?,
+                               notes      = ?
+                           WHERE id = ?
+                           """, (
+                               fields["name"].value.strip(),
+                               fields["qty"].value.strip(),
+                               fields["category"].value,
+                               edit_location_display,
+                               fields["serial"].value,
+                               fields["expire"].value,
+                               fields["notes"].value,
+                               fields["id"]
+                           ))
+        conn.commit()
+
+        edit_dialog_popup.open = False
+        load_item()
+        page.update()
+
     def edit_item(e):
         selected_rows = [row for row in inventory_table.rows if row.selected]
-        if len(selected_rows) != 1:
+        if not selected_rows:
             page.overlay.append(
                 ft.SnackBar(
-                    content=ft.Text("Please select exactly one item to edit!"),
+                    content=ft.Text("Please select at least one item to edit!"),
                     open=True,
                     bgcolor=ft.Colors.RED_600
                 )
             )
             page.update()
             return
-        target_row = selected_rows[0]
-        item_id = target_row.data
 
-        cursor.execute(
-            "SELECT id, name, quantity, category, location, serial, expiration, notes FROM inventory WHERE id = ?",
-            (item_id,)
+        active_edit_fields.clear()
+        edit_items_column.controls.clear()
+
+        for idx, row in enumerate(selected_rows):
+            item_id = row.data
+            cursor.execute(
+                "SELECT id, name, quantity, category, location, serial, expiration, notes FROM inventory WHERE id = ?",
+                (item_id,)
+            )
+            record = cursor.fetchone()
+            if not record:
+                continue
+
+            raw_loc = record[4] or ""
+            if " / " in raw_loc:
+                primary_loc, sub_loc = raw_loc.split(" / ", 1)
+            else:
+                primary_loc, sub_loc = raw_loc, ""
+
+            # Create controls for this specific item
+            e_name = ft.TextField(label="Item Name", width=250, value=record[1] or "")
+            e_qty = ft.TextField(label="Quantity", width=250, value=record[2] or "")
+            e_category = ft.Dropdown(
+                label="Category",
+                width=250,
+                options=[ft.DropdownOption(item) for item in category],
+                value=record[3] if record[3] in category else None
+            )
+
+            e_land = ft.Dropdown(
+                label='Newport Location',
+                visible=(primary_loc == 'Newport'),
+                width=250,
+                options=[ft.DropdownOption(item) for item in land_home],
+                value=sub_loc if primary_loc == "Newport" and sub_loc in land_home else None
+            )
+            e_ship = ft.Dropdown(
+                label='Ship Location',
+                width=250,
+                visible=(primary_loc == 'Ship'),
+                options=[ft.DropdownOption(item) for item in ship_home],
+                value=sub_loc if primary_loc == "Ship" and sub_loc in ship_home else None
+            )
+            e_other = ft.TextField(
+                label='Other location',
+                visible=(primary_loc == 'OTHER'),
+                width=250,
+                value=sub_loc if primary_loc == "OTHER" else ""
+            )
+
+            # Handler scoped to this specific item's location controls
+            def make_location_handler(land_ctrl, ship_ctrl, other_ctrl):
+                def on_loc_change(evt):
+                    val = evt.control.value
+                    land_ctrl.visible = (val == 'Newport')
+                    ship_ctrl.visible = (val == 'Ship')
+                    other_ctrl.visible = (val == 'OTHER')
+                    land_ctrl.update()
+                    ship_ctrl.update()
+                    other_ctrl.update()
+                return on_loc_change
+
+            e_location = ft.Dropdown(
+                label="Location",
+                width=250,
+                options=[ft.DropdownOption(item) for item in location],
+                value=primary_loc if primary_loc in location else None,
+                on_select=make_location_handler(e_land, e_ship, e_other)
+            )
+
+            e_serial = ft.TextField(label="Serial #", width=250, value=record[5] or "")
+            e_expire = ft.TextField(label="Expiration", width=250, value=record[6] or "")
+            e_notes = ft.TextField(label="Notes", width=250, multiline=True, value=record[7] or "")
+
+            active_edit_fields.append({
+                "id": str(record[0]),
+                "name": e_name,
+                "qty": e_qty,
+                "category": e_category,
+                "location": e_location,
+                "land": e_land,
+                "ship": e_ship,
+                "other": e_other,
+                "serial": e_serial,
+                "expire": e_expire,
+                "notes": e_notes
+            })
+
+            # Add this item's section to the scrolling column
+            edit_items_column.controls.append(
+                ft.Container(
+                    bgcolor=gray,
+                    border_radius=8,
+                    padding=10,
+                    content=ft.Column(
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=10,
+                        controls=[
+                            ft.Text(f"Item #{idx + 1}: {record[1] or 'Untitled'}", weight=ft.FontWeight.BOLD, color=dark_blue),
+                            e_name,
+                            e_qty,
+                            e_category,
+                            e_location,
+                            e_land,
+                            e_ship,
+                            e_other,
+                            e_serial,
+                            e_expire,
+                            e_notes,
+                        ]
+                    )
+                )
+            )
+            # Add divider between items
+            if idx < len(selected_rows) - 1:
+                edit_items_column.controls.append(ft.Divider(color=light_blue, thickness=2))
+
+        edit_dialog_popup.title = ft.Text(
+            f"Edit Items ({len(selected_rows)})",
+            weight=ft.FontWeight.BOLD,
+            color=dark_blue
         )
-        record = cursor.fetchone()
-
-        if record:
-            edit_id.value = str(record[0])
-            edit_name.value = record[1] or ""
-            edit_qty.value = record[2] or ""
-            edit_category.value = record[3] if record[3] in category else None
-            edit_location.value = record[4] or ""
-            edit_serial.value = record[5] or ""
-            edit_expire.value = record[6] or ""
-            edit_notes.value = record[7] or ""
-
-        edit_name.error_text = None
-        edit_dialog.open = True
+        edit_dialog_popup.open = True
         page.update()
 
-    edit_id = ft.Text(visible=False)
-    edit_name = ft.TextField(label="Item Name", width=250)
-    edit_qty = ft.TextField(label="Quantity", width=250)
-    edit_category = ft.Dropdown(label="Category", width=250, options=category_dd)
-    edit_location = ft.Dropdown(label="Location", width=250, options = location_dd)
-    edit_serial = ft.TextField(label="Serial #", width=250)
-    edit_expire = ft.TextField(label="Expiration", width=250)
-    edit_notes = ft.TextField(label="Notes", width=250, multiline=True)
+    edit_items_column = ft.Column(
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        tight=True,
+        spacing=15,
+        controls=[]
+    )
 
-    def close_popup(e):
-        edit_dialog.open = False
-        page.update()
-
-    def save_edited_item(e):
-        if not edit_name.value or not edit_name.value.strip():
-            edit_name.error_text = "Item Name required"
-            edit_name.update()
-            return
-        cursor.execute("""
-                       UPDATE inventory
-                       SET name       = ?,
-                           quantity   = ?,
-                           category   = ?,
-                           location   = ?,
-                           serial     = ?,
-                           expiration = ?,
-                           notes      = ?
-                       WHERE id = ?
-                       """, (
-                           edit_name.value.strip(),
-                           edit_qty.value.strip(),
-                           edit_category.value,
-                           edit_location.value,
-                           edit_serial.value,
-                           edit_expire.value,
-                           edit_notes.value,
-                           edit_id.value
-                       ))
-        conn.commit()
-
-        edit_dialog.open = False
-        load_item()
-        page.update()
-
-    edit_dialog = ft.AlertDialog(
+    edit_dialog_popup = ft.AlertDialog(
         modal=True,
-        title=ft.Text("Edit Item", weight=ft.FontWeight.BOLD, color=dark_blue),
+        bgcolor= gray,
+        title=ft.Text("Edit Items", weight=ft.FontWeight.BOLD, color=dark_blue),
         content=ft.Container(
-            width=300,
+            width=320,
+            height=500,  # Defined height enables clean vertical scrolling for multiple items
             content=ft.Column(
+                horizontal_alignment = ft.CrossAxisAlignment.CENTER,
                 tight=True,
                 scroll=ft.ScrollMode.AUTO,
-                controls=[
-                    edit_name,
-                    edit_qty,
-                    edit_category,
-                    edit_location,
-                    edit_serial,
-                    edit_expire,
-                    edit_notes,
-                ]
+                controls=[edit_items_column]
             )
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=close_popup),
-            ft.Button("Save", on_click=save_edited_item, bgcolor=dark_blue, color=white),
+            ft.Button("Cancel", on_click=close_popup),
+            ft.Button("Save All", on_click=save_edited_items, bgcolor=dark_blue, color=white),
         ],
-        actions_alignment=ft.MainAxisAlignment.END,
+        actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
     )
-    page.overlay.append(edit_dialog)
+    page.overlay.append(edit_dialog_popup)
 
-    inventory_table = fdt.DataTable2(   #Displayed datatable
+    inventory_table = fdt.DataTable2(  # Displayed datatable
         fixed_top_rows=1,
         heading_row_color=dark_blue,
         data_text_style=ft.TextStyle(size=11, color=dark_blue),
         heading_text_style=ft.TextStyle(color=white, weight=ft.FontWeight.BOLD, size=11),
+        data_row_color={
+            ft.ControlState.SELECTED: "#B9D9EB", 
+            ft.ControlState.DEFAULT: "transparent",
+        },
         show_checkbox_column=False,
         min_width=600,
         column_spacing=5,
@@ -470,7 +602,7 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
-    cancel_btn = ft.Button(    #cancel button that naviates back to home page and clears all entry fields
+    cancel_btn = ft.Button(  # cancel button that navigates back to home page and clears all entry fields
         on_click=clear_all_cancel,
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
@@ -488,7 +620,7 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
-    delete_btn = ft.Button(      # deletes the selected rows in the datatable when selected
+    delete_btn = ft.Button(  # deletes the selected rows in the datatable when selected
         on_click=delete_selected,
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
@@ -506,7 +638,7 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
-    edit_btn = ft.Button(     #edits selected items in the data table and brings up a popup of the editable items
+    edit_btn = ft.Button(  # edits selected items in the data table and brings up a popup of the editable items
         on_click=edit_item,
         content=ft.Row(
             alignment=ft.MainAxisAlignment.CENTER,
@@ -524,8 +656,8 @@ def main(page: ft.Page):
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
 
-# ADD PAGE functions and items ----------------------------------------------------------------------------------------
-    item_name = ft.TextField(  #item name textfield
+    # ADD PAGE functions and items ----------------------------------------------------------------------------------------
+    item_name = ft.TextField(  # item name textfield
         label='Item Name',
         width=210,
         hint_text='Enter item name',
@@ -533,12 +665,12 @@ def main(page: ft.Page):
         color=ft.Colors.BLACK
     )
 
-    def quantity_change(e): #disables the item quantity textfield
+    def quantity_change(e):  # disables the item quantity textfield
         item_quantity.disabled = e.control.value
         item_quantity.value = ''
         item_quantity.update()
 
-    item_quantity = ft.TextField(  #item quantity textfield
+    item_quantity = ft.TextField(  # item quantity textfield
         label='Quantity',
         width=210,
         hint_text='# or click various',
@@ -548,73 +680,56 @@ def main(page: ft.Page):
         input_filter=ft.NumbersOnlyInputFilter()
     )
 
-    item_number_various = ft.Checkbox(  #checkbox that marks the item quantity as various and disables item quantity textfield
+    item_number_various = ft.Checkbox(  # checkbox that marks the item quantity as various and disables item quantity textfield
         label='Various',
         on_change=quantity_change
     )
 
-    def location_visible(e): #makes sublocations visible depending on main location selection
+    def location_visible(e):  # makes sublocations visible depending on main location selection
         selected_value = e.control.value
 
         land_location.visible = (selected_value == 'Newport')
         ship_location.visible = (selected_value == 'Ship')
         other_location.visible = (selected_value == 'OTHER')
 
-        #land_location.value = ''
-        #ship_location.value = ''
-        #other_location.value = ''
-
         land_location.update()
         ship_location.update()
         other_location.update()
 
-    location = ['', 'Newport', 'Ship', 'OTHER']  #list of item main locations
-    location_dd = [ft.DropdownOption(item) for item in location] #turns the list items into dropdown options
-
-    item_location = ft.Dropdown(   #main item location dropdown (Newport, ship, other)
+    item_location = ft.Dropdown(  # main item location dropdown (Newport, ship, other)
         label='Item Location',
         on_select=location_visible,
         width=210,
         options=location_dd
     )
 
-    land_home = ['', 'NAL', 'BFB', 'Chemical Shed'] #list of item land locations
-    land_home_dd = [ft.DropdownOption(item) for item in land_home] #turns the list items into dropdown options
-
-    land_location = ft.Dropdown(  #Newport location dropdown (BFB, NAL, chem shed)
+    land_location = ft.Dropdown(  # Newport location dropdown (BFB, NAL, chem shed)
         label='Newport Location',
         visible=False,
         width=210,
         options=land_home_dd
     )
 
-    ship_home = ['', 'Wet Lab', 'Acoustics', 'Chem Lab'] #list of item ship locations
-    ship_home_dd = [ft.DropdownOption(item) for item in ship_home]#turns the list items into dropdown options
-
-    ship_location = ft.Dropdown(   #ship location dropdown (wet lab, acoustics, chemlab)
+    ship_location = ft.Dropdown(  # ship location dropdown (wet lab, acoustics, chemlab)
         label='Ship Location',
         width=210,
         visible=False,
         options=ship_home_dd
     )
 
-    other_location = ft.TextField(   #other location textfield
+    other_location = ft.TextField(  # other location textfield
         label='Other location',
         visible=False,
         width=210
     )
 
-    category = ['', 'Sampling/Biology', 'Stationary', 'Hardware & Tools', 'Tech/Equipment', 'Chemicals', 'Rain Gear',
-                'Safety', 'Deck', 'Miscellaneous'] #list of item categories
-    category_dd = [ft.DropdownOption(item) for item in category] #turns the list items into dropdown options
-
-    item_category = ft.Dropdown(  #item category dropdown
+    item_category = ft.Dropdown(  # item category dropdown
         label='Item Category',
         width=210,
         options=category_dd
     )
 
-    notes = ft.TextField(    #item notes textfield
+    notes = ft.TextField(  # item notes textfield
         label='Notes (optional)',
         width=210,
         hint_text='Optional',
@@ -623,29 +738,29 @@ def main(page: ft.Page):
         multiline=True
     )
 
-    def serial_change(e): #enables the serial number textfield
+    def serial_change(e):  # enables the serial number textfield
         item_serial.disabled = not e.control.value
         item_serial.value = ''
         item_serial.update()
 
-    item_serial = ft.TextField(   #item serial number textfield
+    item_serial = ft.TextField(  # item serial number textfield
         label='Item Serial #',
         width=210,
         keyboard_type=ft.KeyboardType.NUMBER,
         disabled=True
     )
 
-    serial_toggle = ft.Checkbox(   #checkbox that enables the serial number textfield
+    serial_toggle = ft.Checkbox(  # checkbox that enables the serial number textfield
         label='Serial Number',
         on_change=serial_change
     )
 
-    def expire_change(e): #enables the item expiration date textfield
+    def expire_change(e):  # enables the item expiration date textfield
         item_expire.disabled = not e.control.value
         item_expire.value = ''
         item_expire.update()
 
-    item_expire = ft.TextField(    #item expiration date textfield
+    item_expire = ft.TextField(  # item expiration date textfield
         label='Item Expiration Date',
         width=210,
         hint_text='(MM/YY)',
@@ -653,81 +768,83 @@ def main(page: ft.Page):
         disabled=True
     )
 
-    expire_toggle = ft.Checkbox(   #checkbox to enable the expiration date textfield
+    expire_toggle = ft.Checkbox(  # checkbox to enable the expiration date textfield
         label='Expiration Date',
         on_change=expire_change
     )
 
-    add_page = ft.Container(        #ADD PAGE
-                expand=True,
-                bgcolor=gray,
-                content=ft.Column(
-                    expand=True,
-                    controls=[
-                          ft.AppBar(
-                              leading=ft.Container(
-                                  padding=ft.Padding(left=15),
-                                  content=ft.Row(
-                                      controls=[
-                                          ft.Text('Add Item', size=20, style=ft.TextStyle(weight=ft.FontWeight.BOLD, color=white))
-                                      ],
-                                  )
-                              ),
-                              bgcolor=dark_gray,
-                              center_title=False,
-                          ),
-                          ft.Row(
-                              spacing=100,
-                              alignment=ft.MainAxisAlignment.CENTER,
-                              vertical_alignment=ft.CrossAxisAlignment.START,
-                              controls=[
-                                     ft.Column(
-                                         spacing=15,
-                                         controls=[
-                                            item_name, ft.Column(
-                                             controls=[item_quantity, item_number_various]),
-                                                item_category,
-                                                item_location,
-                                                land_location,
-                                                ship_location,
-                                                other_location
-                                        ]
-                                     ),
-                                     ft.Column(
-                                         spacing=15,
-                                         controls=[
-                                           ft.Column(
-                                               controls=[serial_toggle, item_serial]),
-                                           ft.Column(
-                                               controls=[expire_toggle, item_expire]),
-                                                    notes
-                                         ]
-                                     )
-                              ]
-                          ),
-                          ft.Container(
-                              height=330,
-                              content=ft.Column(controls=[inventory_table])),
-                          ft.Column(
-                              controls=
-                              ft.Row(
-                                  spacing=20,
-                                  alignment=ft.MainAxisAlignment.CENTER,
-                                  controls=[cancel_btn, delete_btn, edit_btn, add_btn]
-                              )
-                          )
-                    ],
+    add_page = ft.Container(  # ADD PAGE
+        expand=True,
+        bgcolor=gray,
+        content=ft.Column(
+            expand=True,
+            controls=[
+                ft.AppBar(
+                    leading=ft.Container(
+                        padding=ft.Padding(left=15),
+                        content=ft.Row(
+                            controls=[
+                                ft.Text('Add Item', size=20, style=ft.TextStyle(weight=ft.FontWeight.BOLD, color=white))
+                            ],
+                        )
+                    ),
+                    bgcolor=dark_gray,
+                    center_title=False,
                 ),
+                ft.Row(
+                    spacing=100,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                    controls=[
+                        ft.Column(
+                            spacing=15,
+                            controls=[
+                                item_name,
+                                ft.Column(controls=[item_quantity, item_number_various]),
+                                item_category,
+                                item_location,
+                                land_location,
+                                ship_location,
+                                other_location
+                            ]
+                        ),
+                        ft.Column(
+                            spacing=15,
+                            controls=[
+                                ft.Column(controls=[serial_toggle, item_serial]),
+                                ft.Column(controls=[expire_toggle, item_expire]),
+                                notes
+                            ]
+                        )
+                    ]
+                ),
+                ft.Container(
+                    height=330,
+                    content=ft.Column(controls=[inventory_table])
+                ),
+                ft.Column(
+                    controls=[
+                        ft.Row(
+                            spacing=20,
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            controls=[cancel_btn, delete_btn, edit_btn, add_btn]
+                        )
+                    ]
+                )
+            ],
+        ),
     )
 
-#SEARCH PAGE functions and items ---------------------------------------------------------------------------------------------------------
-    keyword_search = ft.TextField(    # keyword textfield for searching
+    # SEARCH PAGE functions and items ---------------------------------------------------------------------------------------------------------
+    def input_search(e):
+        load_item(e.control.value)
+
+    keyword_search = ft.TextField(
         label='Search items',
         hint_text="Name, location, category...",
-        width=450
+        width=450,
+        on_change=input_search
     )
-
-
 
     search_page = ft.Container(
         content=ft.Column(
@@ -743,7 +860,6 @@ def main(page: ft.Page):
                     bgcolor=dark_gray,
                     center_title=False,
                     toolbar_height=40
-
                 ),
                 ft.Row(
                     spacing=100,
@@ -756,22 +872,19 @@ def main(page: ft.Page):
                     ]
                 ),
                 ft.Container(height=420, content=ft.Column(controls=[inventory_table])),
-                ft.Column(controls=
-                          ft.Row(spacing=20, alignment=ft.MainAxisAlignment.CENTER,
-                                 controls=[cancel_btn, delete_btn, edit_btn]
-                                 )
-                          ),
+                ft.Column(controls=[
+                    ft.Row(spacing=20, alignment=ft.MainAxisAlignment.CENTER,
+                           controls=[cancel_btn, delete_btn, edit_btn]
+                           )
+                ]),
             ]
         )
     )
 
-# PACKING PAGE functions and items --------------------------------------------------------------------------------------------------------
+    # PACKING PAGE functions and items --------------------------------------------------------------------------------------------------------
     pack_unpack_page = ft.Container(inventory_table)
 
-    packing_bin = []  # append when bins are entered
-
-
-# Routing definition -------------------------------------------------------------------------------------------------
+    # Routing definition -------------------------------------------------------------------------------------------------
     def navigate_to(route_path):
         page.route = route_path
         route_change(None)
@@ -802,12 +915,12 @@ def main(page: ft.Page):
             page.update()
             load_item()  # Load AFTER rendering page
             return
-        #ITEM SEARCH ROUTE
+        # ITEM SEARCH ROUTE
         elif page.route == '/search_page':
             page.views.append(
                 ft.View(
                     route='/search_page',
-                    controls = [search_page],
+                    controls=[search_page],
                     padding=0,
                     spacing=0,
                 )
@@ -815,7 +928,7 @@ def main(page: ft.Page):
             page.update()
             load_item()  # Load AFTER rendering page
             return
-        #PACK/UNPACK ROUTE
+        # PACK/UNPACK ROUTE
         elif page.route == '/pack_unpack':
             load_item()
             page.views.append(
@@ -826,7 +939,7 @@ def main(page: ft.Page):
                     spacing=0,
                 )
             )
-    page.update()
+        page.update()
 
     # Attach route listener & trigger initial view
     page.on_route_change = route_change
@@ -835,4 +948,4 @@ def main(page: ft.Page):
 
 
 if __name__ == '__main__':
-    ft.run(main) #runs the entire application
+    ft.run(main)  # runs the entire application
