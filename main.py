@@ -259,14 +259,23 @@ def main(page: ft.Page):
         item_serial.value = ''
         notes.value = ''
 
+        keyword_search.value = '' #on search page
+
+        selected_item_ids.clear()
         for row in inventory_table.rows:
             row.selected = False
 
         navigate_to('/')
         page.update()
 
+    selected_item_ids = set()
+
     def handle_row_selection_change(e: ft.Event[fdt.DataRow2]):  # row selection in the datatable
         e.control.selected = not e.control.selected
+        if e.control.selected:
+            selected_item_ids.add(e.control.data)
+        else:
+            selected_item_ids.discard(e.control.data)
         e.control.update()
 
     def load_item(
@@ -303,6 +312,7 @@ def main(page: ft.Page):
 
         for row in cursor.fetchall():
             data_row = ft.DataRow(
+                selected=(row[0] in selected_item_ids),
                 on_select_change=handle_row_selection_change,
                 cells=[
                     ft.DataCell(ft.Text(str(row[1]))),  # name
@@ -328,6 +338,7 @@ def main(page: ft.Page):
         for row in selected_rows:
             item_id = row.data  # Gets the primary key 'id'
             cursor.execute("DELETE FROM inventory WHERE id = ?", (item_id,))
+            selected_item_ids.discard(item_id)
 
         conn.commit()
         load_item()
@@ -387,7 +398,7 @@ def main(page: ft.Page):
         conn.commit()
 
         edit_dialog_popup.open = False
-        load_item()
+        load_item(keyword_search.value if page.route == '/search_page' else "")
         page.update()
 
     def edit_item(e):
@@ -550,8 +561,8 @@ def main(page: ft.Page):
             )
         ),
         actions=[
-            ft.Button("Cancel", on_click=close_popup),
-            ft.Button("Save All", on_click=save_edited_items, bgcolor=dark_blue, color=white),
+            ft.Button("Cancel", on_click=close_popup, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))),
+            ft.Button("Save All", on_click=save_edited_items, bgcolor=dark_blue, color=white, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))),
         ],
         actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
     )
@@ -563,7 +574,7 @@ def main(page: ft.Page):
         data_text_style=ft.TextStyle(size=11, color=dark_blue),
         heading_text_style=ft.TextStyle(color=white, weight=ft.FontWeight.BOLD, size=11),
         data_row_color={
-            ft.ControlState.SELECTED: "#B9D9EB", 
+            ft.ControlState.SELECTED: "#B9D9EB",
             ft.ControlState.DEFAULT: "transparent",
         },
         show_checkbox_column=False,
@@ -659,6 +670,7 @@ def main(page: ft.Page):
     # ADD PAGE functions and items ----------------------------------------------------------------------------------------
     item_name = ft.TextField(  # item name textfield
         label='Item Name',
+        autofocus = True,
         width=210,
         hint_text='Enter item name',
         keyboard_type=ft.KeyboardType.TEXT,
@@ -882,7 +894,194 @@ def main(page: ft.Page):
     )
 
     # PACKING PAGE functions and items --------------------------------------------------------------------------------------------------------
-    pack_unpack_page = ft.Container(inventory_table)
+
+
+    pack_items_column = ft.Column(
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        tight=True,
+        spacing=10,
+        controls=[]
+    )
+
+    pack_new_location = ft.TextField(
+        label="New Location for Selected Items",
+        hint_text="Packing bin name....",
+        width=280,
+    )
+
+    def close_pack_popup(e):
+        pack_dialog_popup.open = False
+        page.update()
+
+    def save_packed_items(e):
+        new_loc = (pack_new_location.value or "").strip()
+
+        # Use selected_item_ids (or fallback to currently selected rows)
+        target_ids = list(selected_item_ids) if selected_item_ids else [
+            row.data for row in inventory_table.rows if row.selected
+        ]
+
+        for item_id in target_ids:
+            cursor.execute(
+                "UPDATE inventory SET location = ? WHERE id = ?",
+                (new_loc, item_id)
+            )
+        conn.commit()
+
+        pack_new_location.value = ""
+        selected_item_ids.clear()
+        pack_dialog_popup.open = False
+        load_item(keyword_search.value or "")
+        page.update()
+
+    def pack_dialog(e):
+        target_ids = list(selected_item_ids) if selected_item_ids else [
+            row.data for row in inventory_table.rows if row.selected
+        ]
+
+        if not target_ids:
+            page.overlay.append(
+                ft.SnackBar(
+                    content=ft.Text("Please select at least one item to pack!"),
+                    open=True,
+                    bgcolor=ft.Colors.RED_600
+                )
+            )
+            page.update()
+            return
+
+        pack_items_column.controls.clear()
+        pack_new_location.value = ""
+        pack_new_location.error_text = None
+
+        for idx, item_id in enumerate(target_ids):
+            cursor.execute(
+                "SELECT id, name, quantity, location FROM inventory WHERE id = ?",
+                (item_id,)
+            )
+            record = cursor.fetchone()
+            if not record:
+                continue
+
+            pack_items_column.controls.append(
+                ft.Container(
+                    bgcolor=gray,
+                    border_radius=8,
+                    padding=10,
+                    width=280,
+                    content=ft.Column(
+                        spacing=4,
+                        controls=[
+                            ft.Text(
+                                f"#{idx + 1}: {record[1] or 'Untitled'}",
+                                weight=ft.FontWeight.BOLD,
+                                color=dark_blue
+                            ),
+                            ft.Text(
+                                f"Qty: {record[2] or '0'}  |  Current Loc: {record[3] or 'None'}",
+                                size=12,
+                                color=dark_gray
+                            ),
+                        ]
+                    )
+                )
+            )
+            if idx < len(target_ids) - 1:
+                pack_items_column.controls.append(ft.Divider(color=light_blue, thickness=1))
+
+        pack_dialog_popup.title = ft.Text(
+            f"Pack Items ({len(target_ids)})",
+            weight=ft.FontWeight.BOLD,
+            color=dark_blue
+        )
+        pack_dialog_popup.open = True
+        page.update()
+
+    pack_btn = ft.Button(  # pack item button
+        on_click=pack_dialog,
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            controls=[
+                ft.Icon(
+                    icon=ft.Icons.ADD,
+                    size=25,
+                    color=light_blue
+                ),
+                ft.Text('Pack Item(s)', size=15, color=dark_blue),
+            ],
+        ),
+        width=160,
+        height=62.5,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+    )
+
+    pack_dialog_popup = ft.AlertDialog(
+        modal=True,
+        bgcolor=gray,
+        title=ft.Text("Pack Items", weight=ft.FontWeight.BOLD, color=dark_blue),
+        content=ft.Container(
+            width=320,
+            height=420,
+            content=ft.Column(
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=15,
+                controls=[
+                    pack_new_location,
+                    ft.Divider(color=dark_blue, thickness=1),
+                    ft.Container(
+                        expand=True,
+                        content=ft.Column(
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            scroll=ft.ScrollMode.AUTO,
+                            controls=[pack_items_column]
+                        )
+                    )
+                ]
+            )
+        ),
+        actions=[
+            ft.Button("Cancel", on_click=close_pack_popup, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))),
+            ft.Button("Save Location", on_click=save_packed_items, bgcolor=dark_blue, color=white, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))),
+        ],
+        actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+    )
+    page.overlay.append(pack_dialog_popup)
+
+
+    pack_unpack_page = ft.Container(
+        content=ft.Column(
+            controls=[
+                ft.AppBar(
+                    leading=ft.Container(
+                        padding=ft.Padding.only(left=15),
+                        content=ft.Row(
+                            controls=[ft.Text('Pack and Unpack', size=20,
+                                              style=ft.TextStyle(weight=ft.FontWeight.BOLD, color=white))],
+                        )
+                    ),
+                    bgcolor=dark_gray,
+                    center_title=False,
+                    toolbar_height=40
+                ),
+                ft.Row(
+                    spacing=100,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                    controls=[
+                        ft.Column(spacing=15, controls=[
+                            keyword_search
+                        ])
+                    ]
+                ),
+                ft.Container(height=420, content=ft.Column(controls=[inventory_table])),
+                ft.Column(controls=[
+                    ft.Row(spacing=20, alignment=ft.MainAxisAlignment.CENTER,
+                           controls=[cancel_btn, pack_btn]
+                           )
+                ]),
+            ]
+        )
+    )
 
     # Routing definition -------------------------------------------------------------------------------------------------
     def navigate_to(route_path):
@@ -930,7 +1129,6 @@ def main(page: ft.Page):
             return
         # PACK/UNPACK ROUTE
         elif page.route == '/pack_unpack':
-            load_item()
             page.views.append(
                 ft.View(
                     route='/pack_unpack',
@@ -939,7 +1137,9 @@ def main(page: ft.Page):
                     spacing=0,
                 )
             )
-        page.update()
+            page.update()
+            load_item()
+            return
 
     # Attach route listener & trigger initial view
     page.on_route_change = route_change
