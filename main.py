@@ -847,7 +847,9 @@ def main(page: ft.Page):
         ),
     )
 
-    # SEARCH PAGE functions and items ---------------------------------------------------------------------------------------------------------
+
+
+# SEARCH PAGE functions and items ---------------------------------------------------------------------------------------------------------
     def input_search(e):
         load_item(e.control.value)
 
@@ -893,9 +895,9 @@ def main(page: ft.Page):
         )
     )
 
-    # PACKING PAGE functions and items --------------------------------------------------------------------------------------------------------
 
 
+# PACKING PAGE functions and items --------------------------------------------------------------------------------------------------------
     pack_items_column = ft.Column(
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         tight=True,
@@ -916,7 +918,6 @@ def main(page: ft.Page):
     def save_packed_items(e):
         new_loc = (pack_new_location.value or "").strip()
 
-        # Use selected_item_ids (or fallback to currently selected rows)
         target_ids = list(selected_item_ids) if selected_item_ids else [
             row.data for row in inventory_table.rows if row.selected
         ]
@@ -1003,9 +1004,9 @@ def main(page: ft.Page):
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
                 ft.Icon(
-                    icon=ft.Icons.ADD,
+                    icon=ft.Icons.MOVE_TO_INBOX_OUTLINED,
                     size=25,
-                    color=light_blue
+                    color=ft.Colors.GREEN
                 ),
                 ft.Text('Pack Item(s)', size=15, color=dark_blue),
             ],
@@ -1014,6 +1015,25 @@ def main(page: ft.Page):
         height=62.5,
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
     )
+
+    bin_btn = ft.Button(  # pack item button
+        #on_click=pack_dialog,
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            controls=[
+                ft.Icon(
+                    icon=ft.Icons.ALL_INBOX,
+                    size=25,
+                    color=light_blue
+                ),
+                ft.Text('Packing Bins', size=15, color=dark_blue),
+            ],
+        ),
+        width=160,
+        height=62.5,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+    )
+
 
     pack_dialog_popup = ft.AlertDialog(
         modal=True,
@@ -1076,14 +1096,14 @@ def main(page: ft.Page):
                 ft.Container(height=420, content=ft.Column(controls=[inventory_table])),
                 ft.Column(controls=[
                     ft.Row(spacing=20, alignment=ft.MainAxisAlignment.CENTER,
-                           controls=[cancel_btn, pack_btn]
+                           controls=[cancel_btn, pack_btn, bin_btn]
                            )
                 ]),
             ]
         )
     )
 
-    # Routing definition -------------------------------------------------------------------------------------------------
+# Routing definition -------------------------------------------------------------------------------------------------
     def navigate_to(route_path):
         page.route = route_path
         route_change(None)
